@@ -110,14 +110,15 @@ class ProjectSearchEngine:
 
         snippets = []
         for i, (_, row) in enumerate(results.head(MAX_DOCS_FOR_LLM).iterrows()):
-            fkz = row.get('FKZ', '')
-            emp = row.get('Zuwendungsempfänger', '')
-            thema = row.get('Thema', '')
-            summe = row.get('Fördersumme in EUR', '')
+            # print("row:", row)
+            fkz = row.get('="FKZ"', '')
+            emp = row.get('="Zuwendungsempfänger"', '')
+            thema = row.get('="Thema"', '')
+            summe = row.get('="Fördersumme in EUR"', '')
             snippets.append(f"{i+1}. FKZ: {fkz} | Empfänger: {emp} | Thema: {thema} | Fördersumme: {summe}")
 
-        system_prompt = "Du bist ein Hilfs-LLM, das Antworten basierend auf gelieferten Projekt-Snippets gibt. Verwende nur die vorliegenden Informationen."
-        user_prompt = f"Kontext:\n{chr(10).join(snippets)}\n\nFrage: {query}\nGib eine kurze, belegte Antwort und nenne die relevanten FKZ(s)."
+        system_prompt = "Du bist ein spezialisierter LLM-Assistent, der auf der Grundlage von bereitgestellten Projekt-Snippets präzise Antworten generiert. Bitte beschränke deine Antworten auf die bereitgestellten Informationen und vermeide Spekulationen oder externe Recherchen."
+        user_prompt = f"Kontext:\n\n{chr(10).join(snippets)}\n\nFrage: {query}\n\nBitte gib eine kurze, präzise und belegte Antwort auf die Frage. Nenne dabei die relevanten FKZ(s) und beziehe dich auf die bereitgestellten Projekt-Snippets."
 
         answer = chat_system_query(system_prompt, user_prompt)
         return answer

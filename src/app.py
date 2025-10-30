@@ -15,7 +15,7 @@ import pandas as pd
 import gradio as gr
 import logging
 
-from .utils.logging_config import get_logger
+from .utils.logging_config import get_logger, setup_logging
 from .search.engine import ProjectSearchEngine
 from .config import TOP_K_DEFAULT
 
@@ -135,7 +135,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             search_btn = gr.Button("Suchen")
 
         result_table = gr.Dataframe(headers=None, interactive=False, label="Treffer")
-        llm_answer = gr.Textbox(label="LLM-Antwort (kontextbasiert)", interactive=False)
+        llm_answer = gr.Textbox(label="LLM-Antwort (kontextbasiert)", interactive=False, lines=10)
 
         def on_search(query: str, mode_choice: str, k: int):
             logger.info("Suchanfrage: mode=%s, k=%s, query=%s", mode_choice, k, query)
@@ -162,7 +162,8 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             if final is None or final.empty:
                 return pd.DataFrame(), "Keine Treffer."
 
-            display_cols = [c for c in ("FKZ", "Zuwendungsempfänger", "Zuwendungsempf\u00e4nger", "Thema", "F\u00f6rdersumme in EUR", "__score", "__kw_score") if c in final.columns]
+            display_cols = [c for c in ('="FKZ"', '="Zuwendungsempfänger"', "Zuwendungsempf\u00e4nger", '="Thema"',
+                                        '="F\u00f6rdersumme in EUR"', "__score", "__kw_score") if c in final.columns]
             display_df = final[display_cols].copy()
 
             # LLM Antwort (kontextbasiert) nur, wenn semantische Informationen vorliegen

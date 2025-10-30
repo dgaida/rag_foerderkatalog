@@ -71,6 +71,8 @@ def build_embeddings_in_batches(engine: ProjectSearchEngine, batch_size: int = 2
 
     logger.info("Starte Batch-Embedding: batch_size=%d, docs=%d", batch_size, len(engine.df))
 
+    print("columns:", engine.df.columns)
+
     # Wir erzeugen Embeddings batchweise. Ollama's Python-API unterstützt in der Regel single-input oder Listen,
     # je nach Version; hier erzeugen wir sequenziell pro Dokument, aber in outer-Batches, damit man Fortschritt hat.
     added = 0
@@ -81,11 +83,14 @@ def build_embeddings_in_batches(engine: ProjectSearchEngine, batch_size: int = 2
             row = engine.df.iloc[idx]
             # Präferenz: Spalten für Text zusammensetzen (robust gegenüber verschiedenen Encodings)
             parts = []
-            for col in ("Zuwendungsempfänger", "Zuwendungsempf\u00e4nger", "Thema", "Klartext Leistungsplansystematik"):
+            for col in ('="Zuwendungsempfänger"', "Zuwendungsempf\u00e4nger", '="Thema"',
+                        '="Klartext Leistungsplansystematik"'):
                 if col in engine.df.columns:
                     val = row.get(col)
                     if val is not None and str(val).strip() != "nan":
                         parts.append(str(val))
+                else:
+                    print(col, " ist nicht in ", engine.df.columns)
             text = ". ".join(parts) if parts else ""
             batch_rows.append((idx, text))
 
@@ -93,10 +98,13 @@ def build_embeddings_in_batches(engine: ProjectSearchEngine, batch_size: int = 2
         for idx, text in batch_rows:
             try:
                 vec = embed_text(text)
-                engine.faiss.add(vec, doc_id=str(idx), persist_now=False)
-                added += 1
-                if added % 100 == 0:
-                    logger.info("Embeddings: hinzugefügt %d Dokumente...", added)
+                if vec:  # Überprüfen Sie, ob der Vektor nicht leer ist
+                    engine.faiss.add(vec, doc_id=str(idx), persist_now=False)
+                    added += 1
+                    if added % 100 == 0:
+                        logger.info("Embeddings: hinzugefügt %d Dokumente...", added)
+                else:
+                    logger.warning("Leerer Embedding-Vektor für idx=%s", idx)
             except Exception as e:
                 logger.exception("Fehler beim Erzeugen des Embeddings für idx=%s: %s", idx, e)
 

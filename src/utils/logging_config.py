@@ -9,9 +9,9 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional
+from ..config import LOG_DIR
 
 # Logging-Verzeichnis
-LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Log-Datei mit Timestamp
