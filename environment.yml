@@ -1,0 +1,17 @@
+name: rag_foerderkatalog
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - faiss-cpu
+  - gradio
+  - requests
+  - pip
+  - tqdm
+  - pip:
+      - ollama
+      - python-dotenv
