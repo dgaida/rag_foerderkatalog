@@ -21,21 +21,22 @@ from .config import TOP_K_DEFAULT
 
 logger = get_logger(__name__)
 
-# Modernes CSS-Styling
+# Modernes CSS-Styling mit MAXIMALEM Kontrast
 CUSTOM_CSS = """
 /* ===== Globale Variablen & Theme ===== */
 :root {
-    --primary-color: #4f46e5;
-    --primary-hover: #4338ca;
+    --primary-color: #6366f1;
+    --primary-hover: #4f46e5;
     --secondary-color: #06b6d4;
     --success-color: #10b981;
     --warning-color: #f59e0b;
     --danger-color: #ef4444;
     --dark-bg: #0f172a;
     --card-bg: #1e293b;
-    --border-color: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
+    --border-color: #475569;
+    --text-primary: #ffffff;
+    --text-secondary: #e2e8f0;
+    --text-muted: #cbd5e1;
     --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
     --border-radius: 12px;
@@ -44,15 +45,52 @@ CUSTOM_CSS = """
 
 /* ===== Body & Container ===== */
 body {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: var(--text-primary);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: var(--text-primary) !important;
 }
 
 .gradio-container {
     max-width: 1400px !important;
     margin: 0 auto !important;
     padding: 2rem !important;
+}
+
+/* ===== KRITISCH: Selektive Textfarben ===== */
+/* Nur spezifische Elemente weiß, NICHT alles */
+h1, h2, h3, h4, h5, h6,
+p:not(.gr-input p),
+label:not(.gr-input label),
+legend,
+.markdown,
+.gr-prose {
+    color: #ffffff !important;
+}
+
+/* Input-Container: Labels weiß, aber Input-Felder dunkel */
+.gr-box label,
+.gr-form label,
+fieldset legend {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* INPUTS: Dunkler Text auf hellem Grund */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+textarea:not([readonly]) {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+/* READ-ONLY Textareas: Heller auf dunklem Grund */
+textarea[readonly] {
+    background: rgba(15, 23, 42, 0.9) !important;
+    color: #ffffff !important;
+    border: 2px solid var(--border-color) !important;
 }
 
 /* ===== Header Styling ===== */
@@ -95,20 +133,29 @@ body {
 }
 
 /* ===== Input Fields ===== */
-.input-container label {
+.input-container label,
+label.svelte-1gfkn6j,
+label,
+.gr-box label,
+.gr-form label,
+fieldset legend,
+.wrap.svelte-1gfkn6j > label,
+span.svelte-1gfkn6j {
     color: var(--text-primary) !important;
     font-weight: 600 !important;
-    font-size: 0.95rem !important;
+    font-size: 1rem !important;
     margin-bottom: 0.5rem !important;
-    display: block;
+    display: block !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+    background: transparent !important;
 }
 
 input[type="text"],
 textarea {
-    background: rgba(15, 23, 42, 0.6) !important;
+    background: #f8fafc !important;
     border: 2px solid var(--border-color) !important;
     border-radius: 8px !important;
-    color: var(--text-primary) !important;
+    color: #1e293b !important;
     padding: 0.75rem 1rem !important;
     font-size: 1rem !important;
     transition: var(--transition) !important;
@@ -123,7 +170,7 @@ textarea:focus {
 
 input[type="text"]::placeholder,
 textarea::placeholder {
-    color: var(--text-secondary) !important;
+    color: #64748b !important;
 }
 
 /* ===== Buttons ===== */
@@ -154,33 +201,83 @@ button[type="submit"]:active {
     transform: translateY(0);
 }
 
-/* ===== Radio Buttons ===== */
-.radio-group {
-    background: rgba(15, 23, 42, 0.4) !important;
+/* ===== Radio Buttons - MAXIMALER KONTRAST ===== */
+.radio-group,
+fieldset.svelte-1gfkn6j,
+fieldset {
+    background: rgba(15, 23, 42, 0.9) !important;
+    border: 2px solid var(--border-color) !important;
     border-radius: 8px !important;
-    padding: 0.5rem !important;
+    padding: 1rem !important;
 }
 
-.radio-group label {
-    color: var(--text-primary) !important;
-    padding: 0.5rem 1rem !important;
+.radio-group label,
+fieldset label,
+.svelte-1gfkn6j label,
+label[for] {
+    color: #ffffff !important;
+    padding: 0.75rem 1rem !important;
     border-radius: 6px !important;
     transition: var(--transition) !important;
-    cursor: pointer;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    background: rgba(30, 41, 59, 0.8) !important;
+    margin: 0.25rem !important;
+    border: 2px solid var(--border-color) !important;
+    display: inline-block !important;
 }
 
-.radio-group input[type="radio"]:checked + label {
-    background: var(--primary-color) !important;
-    color: white !important;
+.radio-group input[type="radio"]:checked + label,
+input[type="radio"]:checked + label,
+input[type="radio"]:checked ~ label {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3) !important;
 }
 
-.radio-group label:hover {
-    background: rgba(79, 70, 229, 0.2) !important;
+.radio-group label:hover,
+fieldset label:hover {
+    background: rgba(99, 102, 241, 0.3) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color) !important;
 }
 
-/* ===== Slider ===== */
+/* Fieldset Legend (z.B. "Suchmodus") */
+fieldset legend,
+legend {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    padding: 0.5rem 1rem !important;
+    background: rgba(99, 102, 241, 0.3) !important;
+    border-radius: 6px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ===== Slider - WEISSE ZAHL AUF DUNKLEM GRUND ===== */
 .slider-container {
     padding: 1rem 0 !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-radius: 8px !important;
+}
+
+.slider-container label,
+.slider-container span,
+.slider-container input {
+    color: #ffffff !important;
+}
+
+/* Slider-Wert-Anzeige */
+input[type="number"].svelte-1b6s6s,
+.number-input {
+    background: rgba(15, 23, 42, 0.9) !important;
+    color: #ffffff !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 0.5rem !important;
+    font-weight: 600 !important;
 }
 
 input[type="range"] {
@@ -196,8 +293,8 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--primary-color);
     cursor: pointer;
@@ -211,8 +308,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--primary-color);
     cursor: pointer;
@@ -220,76 +317,121 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: var(--shadow-md);
 }
 
-/* ===== DataTable ===== */
-.dataframe {
+/* ===== DataTable - WEISSE SCHRIFT AUF DUNKLEM GRUND ===== */
+.dataframe,
+table,
+.gr-table {
     background: var(--dark-bg) !important;
     border-radius: var(--border-radius) !important;
     overflow: hidden;
     box-shadow: var(--shadow-md) !important;
 }
 
-.dataframe thead {
+.dataframe thead,
+table thead,
+.gr-table thead {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
 }
 
-.dataframe thead th {
-    color: white !important;
-    font-weight: 600 !important;
+.dataframe thead th,
+table thead th,
+.gr-table thead th {
+    color: #ffffff !important;
+    font-weight: 700 !important;
     padding: 1rem !important;
     text-align: left !important;
     border-bottom: 2px solid var(--border-color) !important;
 }
 
-.dataframe tbody tr {
+.dataframe tbody tr,
+table tbody tr,
+.gr-table tbody tr {
     border-bottom: 1px solid var(--border-color) !important;
     transition: var(--transition) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
 }
 
-.dataframe tbody tr:hover {
-    background: rgba(79, 70, 229, 0.1) !important;
+.dataframe tbody tr:hover,
+table tbody tr:hover,
+.gr-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.2) !important;
 }
 
-.dataframe tbody td {
-    color: var(--text-primary) !important;
+.dataframe tbody td,
+table tbody td,
+.gr-table tbody td {
+    color: #ffffff !important;
     padding: 0.75rem 1rem !important;
+    font-weight: 500 !important;
 }
 
-/* ===== Textbox (LLM Answer) ===== */
-.output-textbox {
-    background: var(--dark-bg) !important;
+/* Gradio spezifische DataFrame-Klassen */
+.gr-dataframe,
+.gr-dataframe * {
+    color: #ffffff !important;
+}
+
+.gr-dataframe .cell-wrap {
+    background: rgba(15, 23, 42, 0.6) !important;
+}
+
+/* ===== Textbox (LLM Answer) - MIT SCROLLBAR ===== */
+.output-textbox,
+textarea[readonly],
+.gr-textbox {
+    background: rgba(15, 23, 42, 0.9) !important;
     border: 2px solid var(--border-color) !important;
     border-radius: var(--border-radius) !important;
-    color: var(--text-primary) !important;
+    color: #ffffff !important;
     padding: 1.5rem !important;
     font-size: 1rem !important;
     line-height: 1.8 !important;
     font-family: 'Inter', sans-serif !important;
     box-shadow: var(--shadow-md) !important;
+    overflow-y: auto !important;
+    max-height: 600px !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+}
+
+/* Spezifischer für LLM-Antwort-Textbox */
+textarea[data-testid="textbox"] {
+    overflow-y: auto !important;
+    max-height: 600px !important;
 }
 
 /* ===== Tabs ===== */
-.tabs {
+.tabs,
+.tab-nav {
     border-bottom: 2px solid var(--border-color) !important;
     margin-bottom: 1.5rem !important;
+    background: rgba(30, 41, 59, 0.4) !important;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
 }
 
-.tab-nav button {
+.tab-nav button,
+button.svelte-1b6s6s {
     color: var(--text-secondary) !important;
     border: none !important;
     border-bottom: 3px solid transparent !important;
     padding: 1rem 1.5rem !important;
     font-weight: 600 !important;
     transition: var(--transition) !important;
+    background: transparent !important;
+    font-size: 1rem !important;
 }
 
 .tab-nav button:hover {
     color: var(--text-primary) !important;
-    background: rgba(79, 70, 229, 0.1) !important;
+    background: rgba(99, 102, 241, 0.15) !important;
 }
 
-.tab-nav button.selected {
+.tab-nav button.selected,
+button.selected.svelte-1b6s6s {
     color: var(--primary-color) !important;
     border-bottom-color: var(--primary-color) !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    font-weight: 700 !important;
 }
 
 /* ===== Loading Animation ===== */
@@ -309,29 +451,185 @@ input[type="range"]::-moz-range-thumb {
 
 /* ===== Info Cards ===== */
 .info-card {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
     border-left: 4px solid var(--primary-color);
     border-radius: 8px;
-    padding: 1rem 1.5rem;
+    padding: 1.5rem;
     margin: 1rem 0;
+    box-shadow: var(--shadow-md);
 }
 
 .info-card-title {
     color: var(--primary-color);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 1rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .info-card-content {
     color: var(--text-primary);
     font-size: 0.95rem;
-    line-height: 1.6;
+    line-height: 1.7;
+    font-weight: 400;
 }
 
-/* ===== Responsive Design ===== */
+/* ===== Verbesserte Lesbarkeit für alle Texte ===== */
+p, span, div, .markdown {
+    color: var(--text-primary) !important;
+}
+
+/* Footer und sekundäre Texte */
+.footer-text,
+.secondary-text {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+/* Beispiele Section */
+.gr-samples-table,
+.gr-sample-textbox {
+    color: var(--text-primary) !important;
+    background: rgba(30, 41, 59, 0.6) !important;
+}
+
+/* Headers in Markdown */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    margin-top: 1rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Gradio-spezifische Klassen */
+.gr-padded,
+.gr-box,
+.gr-form {
+    color: var(--text-primary) !important;
+}
+
+/* ===== Beispiele Section Styling ===== */
+.examples-header h3 {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
+    margin: 1.5rem 0 1rem 0 !important;
+    padding: 0.5rem !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    border-radius: 8px !important;
+    border-left: 4px solid var(--primary-color) !important;
+}
+
+/* ===== Custom Examples Wrapper ===== */
+.examples-wrapper,
+.custom-examples {
+    background: rgba(15, 23, 42, 0.95) !important;
+    padding: 1.5rem !important;
+    border-radius: var(--border-radius) !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+.custom-examples * {
+    color: #ffffff !important;
+    background: transparent !important;
+}
+
+.custom-examples table {
+    background: rgba(30, 41, 59, 0.8) !important;
+}
+
+.custom-examples td,
+.custom-examples th {
+    color: #ffffff !important;
+    border-color: var(--border-color) !important;
+}
+
+.custom-examples button {
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #ffffff !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+.custom-examples button:hover {
+    background: rgba(99, 102, 241, 0.4) !important;
+    border-color: var(--primary-color) !important;
+}
+.footer-section {
+    background: rgba(30, 41, 59, 0.6) !important;
+    border-radius: var(--border-radius) !important;
+    padding: 1rem !important;
+    margin-top: 2rem !important;
+}
+
+.footer-section p {
+    margin: 0.5rem 0 !important;
+}
+
+.footer-section strong {
+    font-weight: 700 !important;
+}
+
+/* ===== Accordion Styling - WEISSER TEXT ===== */
+.gr-accordion,
+.accordion,
+details {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+.gr-accordion-header,
+.accordion-header,
+summary,
+details summary {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 1rem !important;
+    background: rgba(99, 102, 241, 0.2) !important;
+    cursor: pointer !important;
+    border-radius: var(--border-radius) !important;
+}
+
+details[open] summary {
+    border-bottom: 2px solid var(--border-color) !important;
+    margin-bottom: 1rem !important;
+}
+
+/* Accordion Content */
+.accordion-content,
+details > *:not(summary) {
+    color: #ffffff !important;
+    padding: 1rem !important;
+}
+
+/* Statistik-Markdown in Accordion */
+.markdown h3,
+.markdown p {
+    color: #ffffff !important;
+}
+
+/* Bessere Kontraste für interaktive Elemente */
+button, input, select, textarea {
+    color: var(--text-primary) !important;
+}
+
+/* Gradio Examples Table */
+.gr-samples-table td {
+    color: var(--text-primary) !important;
+    background: rgba(30, 41, 59, 0.4) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.gr-samples-table th {
+    color: var(--text-primary) !important;
+    background: rgba(99, 102, 241, 0.2) !important;
+    font-weight: 600 !important;
+}
 @media (max-width: 768px) {
     .gradio-container {
         padding: 1rem !important;
@@ -630,7 +928,8 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 )
 
         # Examples Section
-        gr.Markdown("### 💡 Beispielsuchen")
+        gr.Markdown("### 💡 Beispielsuchen", elem_classes="examples-header")
+
         gr.Examples(
             examples=[
                 ["Künstliche Intelligenz Hochschule Bayern", "hybrid", 20],
@@ -761,11 +1060,19 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
         gr.Markdown(
             """
             ---
-            <div style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
-                <p>🚀 Powered by <strong>Ollama</strong>, <strong>FAISS</strong>, <strong>Gradio</strong> & <strong>LLMClient</strong></p>
-                <p>📊 Datenquelle: BMBF Förderkatalog | 🧠 RAG-basierte semantische Suche</p>
+            <div style="text-align: center; padding: 1.5rem 0;">
+                <p style="color: #e2e8f0; font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    🚀 Powered by <strong style="color: #6366f1;">Ollama</strong>, 
+                    <strong style="color: #06b6d4;">FAISS</strong>, 
+                    <strong style="color: #10b981;">Gradio</strong> & 
+                    <strong style="color: #f59e0b;">LLMClient</strong>
+                </p>
+                <p style="color: #cbd5e1; font-size: 0.9rem;">
+                    📊 Datenquelle: BMBF Förderkatalog | 🧠 RAG-basierte semantische Suche
+                </p>
             </div>
-            """
+            """,
+            elem_classes="footer-section"
         )
 
     return demo
@@ -784,3 +1091,5 @@ if __name__ == "__main__":
         logger.exception("Fehler beim Erzeugen der Embeddings beim App-Start")
     demo = build_ui(engine)
     demo.launch(share=False, inbrowser=True)
+
+    

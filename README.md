@@ -5,10 +5,13 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 
 ---
 
-[![Tests](https://github.com/dgaida/rag_foerderkatalog/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions)
-[![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/main/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
+![CI/CD Pipeline](https://github.com/dgaida/rag_foerderkatalog/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/ci.yml)
+[![Test Suite](https://github.com/dgaida/rag_foerderkatalog/workflows/Test%20Suite/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/master/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/dgaida/rag_foerderkatalog/graphs/commit-activity)
 
 ## 🚀 Features
 
