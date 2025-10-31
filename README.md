@@ -5,15 +5,22 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 
 ---
 
+[![Tests](https://github.com/dgaida/rag_foerderkatalog/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions)
+[![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/main/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 ## 🚀 Features
 
-✅ **Semantische Suche** — auf Basis von Embeddings (Ollama + FAISS)
-✅ **Keyword-basierte Suche** — string- und tokenbasiert, schnelle Ergänzung zur semantischen Suche
-✅ **Hybride Suche** — Kombination beider Ansätze mit gewichteter Ergebnisaggregation
-✅ **Batch-Embeddings** — für große CSV-Dateien (192 MB Förderkatalog)
-✅ **RAG-Pipeline** — kontextbasiertes LLM (Antworten auf Suchanfragen)
-✅ **Gradio GUI** — intuitive Weboberfläche zur Suche und Ergebnisexploration
-✅ **Logging & Persistenz** — automatisch im `logs/` Verzeichnis
+✅ **Semantische Suche** — auf Basis von Embeddings (Ollama + FAISS)  
+✅ **Keyword-basierte Suche** — string- und tokenbasiert, schnelle Ergänzung zur semantischen Suche  
+✅ **Hybride Suche** — Kombination beider Ansätze mit gewichteter Ergebnisaggregation  
+✅ **Erweiterte Embeddings** — inkl. Laufzeit-Extraktion (z.B. "2002 - 2005"), Bundesland, Förderprofil  
+✅ **Batch-Embeddings** — für große CSV-Dateien (192 MB Förderkatalog)  
+✅ **RAG-Pipeline** — kontextbasiertes LLM (Antworten auf Suchanfragen)  
+✅ **Gradio GUI** — intuitive Weboberfläche zur Suche und Ergebnisexploration  
+✅ **Logging & Persistenz** — automatisch im `logs/` Verzeichnis  
+✅ **Unit Tests** — umfassende Test-Suite mit pytest (>80% Coverage)  
 
 ---
 
@@ -27,21 +34,29 @@ rag-foerderprojekte/
 │   ├── vector.index                   # FAISS Index
 │   └── embeddings_map.json            # Mapping (id -> row)
 ├── logs/
-│   └── app_YYYYMMDD.log
+│   ├── app_YYYYMMDD.log              # Application Logs
+│   └── prompts/                       # Gespeicherte LLM-Prompts
 ├── src/
 │   ├── app.py                         # Gradio UI mit hybrider Suche
 │   ├── config.py                      # Zentrale Pfade & Defaults
 │   ├── search/
-│   │   └── engine.py                  # ProjectSearchEngine (semantische Suche)
+│   │   └── engine.py                  # ProjectSearchEngine
 │   ├── embeddings/
 │   │   └── faiss_store.py             # FAISS-Index Management
 │   ├── llm/
-│   │   └── llm_wrapper.py             # LLMClient + Ollama-Integration
+│   │   └── llm_wrapper.py             # LLMClient + Ollama
 │   └── utils/
 │       └── logging_config.py          # Zentrale Logging-Konfiguration
-├── main.py                            # Einstiegspunkt (Batch Embeddings + App Start)
+├── tests/                              # Test-Suite
+│   ├── __init__.py
+│   ├── test_config.py
+│   ├── test_llm_wrapper.py
+│   └── test_engine.py
+├── main.py                            # Einstiegspunkt
 ├── environment.yml                    # Anaconda Umgebung
-└── README.md
+├── requirements-test.txt              # Test-Dependencies
+├── pytest.ini                         # pytest-Konfiguration
+└── README.md                          # Diese Datei
 ```
 
 ---
@@ -53,11 +68,12 @@ rag-foerderprojekte/
 ```bash
 conda env create -f environment.yml
 conda activate rag_foerderkatalog
+pip install git+https://github.com/dgaida/llm_client.git
 ```
 
 ### 2️⃣ Ollama & Modelle installieren
 
-Ollama muss lokal installiert und ein Embedding-fähiges Modell vorhanden sein, z. B.:
+Ollama muss lokal installiert und ein Embedding-fähiges Modell vorhanden sein:
 
 ```bash
 ollama pull nomic-embed-text
@@ -67,7 +83,7 @@ ollama pull nomic-embed-text
 
 Erstelle eine Datei `.env` oder `secrets.env` mit deinem API-Key:
 
-```
+```env
 GROQ_API_KEY=dein_api_key
 ```
 
@@ -95,6 +111,44 @@ Falls der Index (`data/vector.index`) bereits existiert:
 python main.py --no-embeddings
 ```
 
+### Debug-Modus (limitierte Anzahl Projekte)
+
+Für schnelles Testing nur die ersten 1000 Projekte indizieren:
+
+```bash
+python main.py --limit 1000 --log-level DEBUG
+```
+
+---
+
+## 🧪 Tests ausführen
+
+### Alle Tests
+
+```bash
+pytest
+```
+
+### Mit Coverage-Report
+
+```bash
+pytest --cov=src --cov-report=html
+```
+
+HTML-Report öffnen: `htmlcov/index.html`
+
+### Einzelne Test-Datei
+
+```bash
+pytest tests/test_engine.py -v
+```
+
+### Nur Unit-Tests (schnell)
+
+```bash
+pytest -m unit
+```
+
 ---
 
 ## 🔍 Suchmodi
@@ -113,65 +167,139 @@ python main.py --no-embeddings
 | ----------------------------------- | ------------------------------------------- |
 | `Künstliche Intelligenz Hochschule` | Sucht Projekte zu KI im Hochschulkontext    |
 | `Wasserstoff Energie NRW`           | Projekte mit Fokus auf Wasserstoff in NRW   |
-| `Digitalisierung Bildung`           | Bildungsprojekte im Bereich Digitalisierung |
+| `Digitalisierung Bildung 2020-2025` | Bildungsprojekte mit Zeitraum               |
+| `Quantencomputer Bayern`            | Regionale Suche nach Quantencomputing       |
 
 ---
 
 ## 🧠 Funktionsweise
 
-1. **CSV-Import & Bereinigung**
-   Alle Spalten werden dekodiert und normalisiert (inkl. „Fördersumme in EUR“).
+### 1. CSV-Import & Bereinigung
+Alle Spalten werden dekodiert und normalisiert:
+- Entfernung von Excel-Formatierung (`="`, `"`)
+- Konvertierung der Fördersummen (`.` → `""`, `,` → `.`)
+- Extraktion von Start-/Endjahr und Erstellung der Laufzeit-Spalte
 
-2. **Batchweise Embedding-Erstellung**
-   Texte aus relevanten Spalten (`Zuwendungsempfänger`, `Thema`, `Klartext Leistungsplansystematik`) werden mit **Ollama Embeddings** in Vektoren überführt und in einem **FAISS Index** gespeichert.
+### 2. Erweiterte Embedding-Erstellung
+Texte aus relevanten Spalten werden mit **Ollama Embeddings** in Vektoren überführt:
+- `Zuwendungsempfänger`
+- `Thema`
+- `Klartext Leistungsplansystematik`
+- `Ausführende Stelle` ✨
+- `Stadt/Gemeinde` ✨
+- `Bundesland` ✨
+- `__laufzeit` (z.B. "2002 - 2005") ✨
+- `Förderprofil` ✨
+- `Verbundprojekt` ✨
 
-3. **Semantische Suche**
-   Abfragen werden eingebettet und mit Cosine Similarity gegen den Index verglichen.
+### 3. Semantische Suche
+Abfragen werden eingebettet und mit Cosine Similarity gegen den FAISS-Index verglichen.
 
-4. **Keyword-Suche**
-   Einfache Token- und Teilstring-Suche über ausgewählte Spalten, top-5 Ergebnisse.
+### 4. Keyword-Suche
+Einfache Token- und Teilstring-Suche über ausgewählte Spalten, top-5 Ergebnisse.
 
-5. **Hybride Aggregation**
-   Ergebnisse werden zusammengeführt, priorisiert nach semantischer Relevanz, ergänzt durch keyword-Treffer.
+### 5. Hybride Aggregation
+Ergebnisse werden zusammengeführt, priorisiert nach semantischer Relevanz, ergänzt durch keyword-Treffer.
 
-6. **LLM-Antwort (RAG)**
-   Die Top-Ergebnisse werden an das LLM (über `LLMClient`) als Kontext übergeben, um eine konsolidierte, belegte Antwort zu erzeugen.
+### 6. LLM-Antwort (RAG)
+Die Top-Ergebnisse werden an das LLM übergeben mit:
+- **System-Prompt**: Spezialisiert auf BMBF-Förderung
+- **Strukturiertem User-Prompt**: Mit Kontext und klaren Ausgabeanweisungen
+- **Quellenangaben**: FKZ-Nummern zur Nachvollziehbarkeit
+
+---
+
+## 📊 Embedding-Qualität
+
+### Inhalte
+- 9 Informationsquellen inkl. Laufzeit
+- Regionale Suche (Stadt, Bundesland)
+- Zeitraumbasierte Queries möglich ("2020-2025")
+- Verbundprojekt-Erkennung
+
+### Beispiel Embedding-Text (neu)
+```
+Hochschulrektorenkonferenz. Aufbau des Bulgarisch-Rumänischen Interuniversitären Europazentrums. Wissenschaftliche Zusammenarbeit. Hochschulrektorenkonferenz. Bonn. Nordrhein-Westfalen. 2002 - 2003. Technologie- und Innovationsförderung.
+```
 
 ---
 
 ## 🧾 Logging
 
 Logs werden automatisch unter `logs/app_YYYYMMDD.log` gespeichert.
-Das Logging-Level kann über `--log-level DEBUG` erhöht werden.
+LLM-Prompts werden zusätzlich in `logs/prompts/prompt-TIMESTAMP.md` abgelegt.
+
+Log-Level kann über `--log-level DEBUG` erhöht werden.
 
 ---
 
 ## 🧪 Entwicklungsnotizen
 
-* Projekt getestet mit **Python 3.11**, **FAISS 1.8**, **Ollama 0.3+**, **Gradio 5+**.
-* Embedding-Dauer für 192 MB CSV kann mehrere Stunden betragen (je nach Hardware).
-* Für parallele Embedding-Erzeugung kann später Multiprocessing ergänzt werden.
+* Projekt getestet mit **Python 3.11**, **FAISS 1.8**, **Ollama 0.3+**, **Gradio 5+**
+* Embedding-Dauer für 192 MB CSV: ca. 2-4 Stunden (je nach Hardware)
+* Test-Coverage-Ziel: >80%
+* Type-Checking: `mypy src/` (empfohlen)
+* Code-Formatierung: `black src/` und `isort src/`
 
 ---
 
-## 🖼️ GUI-Vorschau
+## 🛠️ Development Workflow
 
-*(Screenshot-Platzhalter für GitHub-README)*
+### Code-Qualität prüfen
 
-![RAG Förderkatalog UI Vorschau](docs/screenshot.png)
+```bash
+# Formatierung
+black src/
+isort src/
+
+# Type-Checking
+mypy src/
+
+# Linting
+flake8 src/
+
+# Tests mit Coverage
+pytest --cov=src --cov-report=term-missing
+```
+
+### Pre-Commit Hook einrichten
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+black src/ tests/
+isort src/ tests/
+pytest tests/ -v
+```
 
 ---
 
 ## 🙏 Dank & Attribution
 
-Dieses Projekt entstand teilweise inspiriert durch das Repository
-➡️ [https://github.com/ibaleri/Foerderprojekt](https://github.com/ibaleri/Foerderprojekt)
+Dieses Projekt entstand inspiriert durch:
+- ➡️ [ibaleri/Foerderprojekt](https://github.com/ibaleri/Foerderprojekt)
 
-sowie durch die Integration von
-➡️ [https://github.com/dgaida/llm_client](https://github.com/dgaida/llm_client)
-
-Beide Projekte haben wertvolle Ideen und Schnittstellen geliefert, auf denen diese Anwendung aufbaut.
+Das Projekt hat wertvolle Ideen und Schnittstellen geliefert, auf denen diese Anwendung aufbaut.
 
 ---
 
-**© 2025 – RAG Förderkatalog (Open Source / MIT Lizenz)**
+## 📋 TODO / Roadmap
+
+- [ ] Multiprocessing für parallele Embedding-Erzeugung
+- [ ] Docker-Container für einfaches Deployment
+- [ ] API-Endpunkt (FastAPI) zusätzlich zur Gradio-UI
+- [ ] Integration weiterer Embedding-Modelle (SentenceTransformers)
+- [ ] Caching-Layer für häufige Queries
+- [ ] Admin-Dashboard für Index-Verwaltung
+- [ ] Export-Funktion für Suchergebnisse (CSV, Excel)
+- [ ] A/B-Testing verschiedener Prompt-Varianten
+
+---
+
+## 📄 Lizenz
+
+**MIT License** — siehe [LICENSE](LICENSE)
+
+---
+
+**© 2025 – RAG Förderkatalog**  

@@ -1,0 +1,172 @@
+.PHONY: help install install-dev test test-cov lint format clean build docs run
+
+# Variables
+PYTHON := python3
+PIP := $(PYTHON) -m pip
+PYTEST := $(PYTHON) -m pytest
+BLACK := $(PYTHON) -m black
+ISORT := $(PYTHON) -m isort
+FLAKE8 := $(PYTHON) -m flake8
+MYPY := $(PYTHON) -m mypy
+
+# Help target
+help:
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║          RAG Förderkatalog - Development Commands         ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "📦 Installation:"
+	@echo "  make install          Install production dependencies"
+	@echo "  make install-dev      Install all dependencies (dev + test)"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  make test             Run all tests"
+	@echo "  make test-cov         Run tests with coverage report"
+	@echo "  make test-fast        Run tests without slow markers"
+	@echo "  make test-unit        Run only unit tests"
+	@echo ""
+	@echo "🧹 Code Quality:"
+	@echo "  make lint             Run all linters (flake8, mypy)"
+	@echo "  make format           Format code (black, isort)"
+	@echo "  make format-check     Check code formatting without changes"
+	@echo "  make type-check       Run mypy type checker"
+	@echo ""
+	@echo "🏗️  Build & Deploy:"
+	@echo "  make build            Build distribution packages"
+	@echo "  make clean            Clean build artifacts and cache"
+	@echo "  make clean-all        Deep clean (includes data/logs)"
+	@echo ""
+	@echo "🚀 Running:"
+	@echo "  make run              Start the application"
+	@echo "  make run-debug        Start with debug logging"
+	@echo "  make run-limited      Start with limited dataset (1000 projects)"
+	@echo ""
+	@echo "📚 Documentation:"
+	@echo "  make docs             Generate documentation"
+	@echo ""
+
+# Installation targets
+install:
+	$(PIP) install --upgrade pip
+	$(PIP) install -e .
+
+install-dev:
+	$(PIP) install --upgrade pip
+	$(PIP) install -e ".[dev]"
+
+# Testing targets
+test:
+	$(PYTEST) tests/ -v
+
+test-cov:
+	$(PYTEST) tests/ -v --cov=src --cov-report=html --cov-report=term-missing
+	@echo "📊 Coverage report generated in htmlcov/index.html"
+
+test-fast:
+	$(PYTEST) tests/ -v -m "not slow"
+
+test-unit:
+	$(PYTEST) tests/ -v -m "unit"
+
+test-watch:
+	$(PYTEST) tests/ -v --looponfail
+
+# Linting and formatting targets
+lint:
+	@echo "🔍 Running Flake8..."
+	$(FLAKE8) src/ tests/
+	@echo "✅ Flake8 passed"
+
+format:
+	@echo "🎨 Formatting code with Black..."
+	$(BLACK) src/ tests/
+	@echo "📋 Sorting imports with isort..."
+	$(ISORT) src/ tests/
+	@echo "✅ Code formatted"
+
+format-check:
+	@echo "🔍 Checking code format..."
+	$(BLACK) --check src/ tests/
+	$(ISORT) --check-only src/ tests/
+
+type-check:
+	@echo "🔎 Running mypy type checker..."
+	$(MYPY) src/ --ignore-missing-imports
+
+# All quality checks
+check-all: format-check lint type-check test
+	@echo "✅ All checks passed!"
+
+# Build targets
+build: clean
+	@echo "🏗️  Building distribution packages..."
+	$(PYTHON) -m build
+	@echo "✅ Build complete. Packages in dist/"
+
+clean:
+	@echo "🧹 Cleaning build artifacts..."
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info
+	rm -rf htmlcov/
+	rm -rf .pytest_cache/
+	rm -rf .coverage
+	rm -rf coverage.xml
+	rm -rf junit.xml
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*~" -delete
+	@echo "✅ Clean complete"
+
+clean-all: clean
+	@echo "🧹 Deep cleaning (including data and logs)..."
+	rm -rf data/vector.index
+	rm -rf data/embeddings_map.json
+	rm -rf logs/*.log
+	rm -rf logs/prompts/*.md
+	@echo "✅ Deep clean complete"
+
+# Documentation targets
+docs:
+	@echo "📚 Generating documentation..."
+	$(PYTHON) -m pydoc -w src
+	@echo "✅ Documentation generated"
+
+# Running targets
+run:
+	$(PYTHON) main.py
+
+run-debug:
+	$(PYTHON) main.py --log-level DEBUG
+
+run-limited:
+	$(PYTHON) main.py --limit 1000 --batch-size 100
+
+run-no-embeddings:
+	$(PYTHON) main.py --no-embeddings
+
+# Git helpers
+git-pre-commit: format lint test-fast
+	@echo "✅ Pre-commit checks passed!"
+
+# Docker targets (optional, if Docker support added later)
+docker-build:
+	docker build -t rag-foerderkatalog:latest .
+
+docker-run:
+	docker run -p 7860:7860 rag-foerderkatalog:latest
+
+# CI simulation
+ci: format-check lint type-check test-cov
+	@echo "✅ CI checks passed!"
+
+# Version bump (requires bumpversion)
+bump-patch:
+	bumpversion patch
+
+bump-minor:
+	bumpversion minor
+
+bump-major:
+	bumpversion major

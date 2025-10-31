@@ -12,6 +12,22 @@ dependencies:
   - requests
   - pip
   - tqdm
+
+  # Testing
+  - pytest
+  - pytest-cov
+  - pytest-mock
+
+  # Code Quality
+  - black
+  - isort
+  - flake8
+  - mypy
+
   - pip:
       - ollama
       - python-dotenv
+      - pytest-asyncio>=0.21.1
+      - faker>=22.0.0
+      - freezegun>=1.4.0
+      - responses>=0.24.1
