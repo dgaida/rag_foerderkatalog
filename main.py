@@ -4,8 +4,8 @@ main.py
 
 Startpunkt für die RAG-Anwendung mit inkrementeller Indizierung:
 - Lädt CSV
-- Indiziert bei jedem Start 5000 weitere Projekte
-- Persistiert FAISS-Index nach jedem Batch
+- Validiert Index-Vollständigkeit
+- Indiziert fehlende Projekte automatisch
 - Startet die Gradio-App
 
 Voraussetzungen:
@@ -21,6 +21,7 @@ from src.utils.logging_config import setup_logging, get_logger
 from src.search.engine import ProjectSearchEngine
 from src.llm.llm_wrapper import embed_text
 from src.config import DATA_DIR
+from src.utils.index_validator import IndexValidator, get_new_projects_summary
 
 logger = get_logger(__name__)
 
@@ -59,8 +60,95 @@ def save_progress(indexed_rows: int) -> None:
         logger.error("Fehler beim Speichern des Fortschritts: %s", e)
 
 
+def build_embeddings_for_missing(engine: ProjectSearchEngine, missing_indices: list, batch_size: int = 5000) -> None:
+    """Indiziert nur die fehlenden Projekte.
+
+    Args:
+        engine: ProjectSearchEngine mit geladenem engine.df
+        missing_indices: Liste der fehlenden DataFrame-Indizes
+        batch_size: Maximale Anzahl pro Durchlauf
+    """
+    if not missing_indices:
+        logger.info("✅ Keine fehlenden Projekte zum Indizieren")
+        return
+
+    total_missing = len(missing_indices)
+    batch_end = min(batch_size, total_missing)
+    indices_to_process = missing_indices[:batch_end]
+
+    logger.info(
+        "📊 Indiziere %d von %d fehlenden Projekten (%.1f%%)",
+        len(indices_to_process),
+        total_missing,
+        (len(indices_to_process) / total_missing) * 100,
+    )
+
+    added = 0
+    for i, idx in enumerate(indices_to_process, 1):
+        row = engine.df.iloc[idx]
+
+        # Erstelle Embedding-Text
+        parts = []
+        for col in [
+            '="Zuwendungsempfänger"',
+            '="Thema"',
+            '="Klartext Leistungsplansystematik"',
+            '="Ausführende Stelle"',
+            '="Stadt/Gemeinde"',
+            '="Bundesland"',
+            "__laufzeit",
+            '="Förderprofil"',
+            '="Verbundprojekt"',
+        ]:
+            if col in engine.df.columns:
+                val = row.get(col)
+                if val is not None and str(val).strip() and str(val).strip() != "nan":
+                    parts.append(str(val))
+
+        text = ". ".join(parts) if parts else ""
+
+        if not text:
+            logger.warning("⚠️ Leerer Text für Zeile %d, überspringe", idx)
+            continue
+
+        try:
+            vec = embed_text(text)
+            if vec:
+                engine.faiss.add(vec, doc_id=str(idx), persist_now=False)
+                added += 1
+
+                # Fortschritt alle 100 Zeilen loggen
+                if added % 100 == 0:
+                    logger.info(
+                        "⏳ Fortschritt: %d/%d (%.1f%%)",
+                        added,
+                        len(indices_to_process),
+                        (added / len(indices_to_process)) * 100,
+                    )
+            else:
+                logger.warning("⚠️ Leerer Embedding-Vektor für idx=%d", idx)
+        except Exception as e:
+            logger.exception("❌ Fehler beim Erzeugen des Embeddings für idx=%d: %s", idx, e)
+
+    # Persistiere Index
+    engine.faiss.persist()
+
+    remaining = total_missing - len(indices_to_process)
+    logger.info(
+        "✅ Batch abgeschlossen: %d Embeddings hinzugefügt. " "Noch %d Projekte verbleibend (%.1f%%)",
+        added,
+        remaining,
+        (remaining / total_missing) * 100 if total_missing > 0 else 0,
+    )
+
+    if remaining == 0:
+        logger.info("🎉 FERTIG! Alle fehlenden Projekte wurden erfolgreich indiziert!")
+
+
 def build_embeddings_incremental(engine: ProjectSearchEngine, batch_size: int = 5000, force_rebuild: bool = False) -> None:
-    """Indiziert inkrementell weitere Projekte.
+    """Indiziert inkrementell weitere Projekte (Legacy-Funktion).
+
+    DEPRECATED: Verwenden Sie stattdessen die Validator-basierte Methode.
 
     Bei jedem Aufruf werden batch_size weitere Zeilen indiziert,
     bis alle Projekte verarbeitet sind.
@@ -70,6 +158,8 @@ def build_embeddings_incremental(engine: ProjectSearchEngine, batch_size: int = 
         batch_size: Anzahl der Zeilen, die pro Start indiziert werden
         force_rebuild: Wenn True, wird von vorne begonnen
     """
+    logger.warning("⚠️ Verwende Legacy-Indizierung. Empfohlen: Validator-basierte Methode")
+
     if engine.df is None:
         raise RuntimeError("DataFrame nicht geladen. Rufe load_and_clean() zuvor auf.")
 
@@ -163,6 +253,8 @@ def parse_args():
     )
     parser.add_argument("--no-embeddings", action="store_true", help="Überspringe Indizierung (nur App starten)")
     parser.add_argument("--force-rebuild", action="store_true", help="Index neu aufbauen (von vorne beginnen)")
+    parser.add_argument("--validate-only", action="store_true", help="Nur Index validieren, nicht starten")
+    parser.add_argument("--show-missing", action="store_true", help="Zeige Details zu fehlenden Projekten")
     parser.add_argument("--log-level", default="INFO", help="Log-Level (DEBUG/INFO/WARNING/ERROR)")
     return parser.parse_args()
 
@@ -172,7 +264,7 @@ def main():
     setup_logging()
     logging.getLogger().setLevel(getattr(logging, args.log_level.upper(), logging.INFO))
 
-    logger.info("🚀 Starte RAG Förderkatalog mit inkrementeller Indizierung")
+    logger.info("🚀 Starte RAG Förderkatalog mit intelligenter Index-Validierung")
 
     engine = ProjectSearchEngine()
 
@@ -183,20 +275,71 @@ def main():
         logger.exception("❌ Fehler beim Laden der CSV: %s", e)
         raise
 
-    # Inkrementelle Indizierung
+    # Index-Validierung durchführen
+    logger.info("")
+    logger.info("🔍 Prüfe Index-Vollständigkeit...")
+
+    validator = IndexValidator(engine.faiss, engine.df)
+    is_complete, stats = validator.validate_index()
+
+    # Detaillierter Report
+    validator.log_validation_report()
+
+    # Zeige neue Projekte wenn gewünscht
+    if args.show_missing and stats["missing_count"] > 0:
+        logger.info("")
+        summary = get_new_projects_summary(validator)
+        logger.info(summary)
+
+    # Nur Validierung, dann beenden
+    if args.validate_only:
+        logger.info("✅ Validierung abgeschlossen (--validate-only)")
+        return
+
+    # Indizierung
     if not args.no_embeddings:
         try:
             if args.force_rebuild:
                 logger.warning("⚠️ Index wird neu aufgebaut!")
                 engine.faiss.clear()
                 save_progress(0)
+                # Nach Clear ist der Index leer, re-validieren
+                validator = IndexValidator(engine.faiss, engine.df)
 
-            build_embeddings_incremental(engine, batch_size=args.batch_size, force_rebuild=args.force_rebuild)
+            # Ermittle fehlende Einträge
+            missing_indices = validator.get_missing_indices()
+
+            if missing_indices:
+                logger.info("")
+                logger.info("🔄 Starte Indizierung der fehlenden Projekte...")
+                build_embeddings_for_missing(engine, missing_indices, batch_size=args.batch_size)
+
+                # Re-validierung nach Indizierung
+                logger.info("")
+                logger.info("🔍 Erneute Validierung nach Indizierung...")
+                validator = IndexValidator(engine.faiss, engine.df)
+                validator.log_validation_report()
+            else:
+                logger.info("✅ Index ist vollständig, keine Indizierung notwendig")
+
         except Exception:
-            logger.exception("❌ Inkrementelle Indizierung fehlgeschlagen")
+            logger.exception("❌ Indizierung fehlgeschlagen")
             raise
     else:
         logger.info("⏭️ Indizierung übersprungen (--no-embeddings)")
+
+        # Warnung wenn Index nicht vollständig
+        if not is_complete and stats["missing_count"] > 0:
+            logger.warning("")
+            logger.warning("⚠️" * 30)
+            logger.warning("⚠️  WARNUNG: Index ist nicht vollständig!")
+            logger.warning("⚠️  %d Projekte fehlen im Index", stats["missing_count"])
+            logger.warning("⚠️  Suchergebnisse könnten unvollständig sein.")
+            logger.warning("⚠️")
+            logger.warning("⚠️  Zum Vervollständigen starten Sie:")
+            logger.warning("⚠️    python main.py --batch-size %d", args.batch_size)
+            logger.warning("⚠️" * 30)
+            logger.warning("")
 
     # Starte Gradio App
     try:
@@ -204,6 +347,7 @@ def main():
 
         demo = build_ui(engine)
 
+        logger.info("")
         logger.info("🌐 Starte Gradio-Oberfläche...")
         demo.launch(share=False, inbrowser=True)
     except Exception as e:
