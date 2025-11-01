@@ -71,7 +71,7 @@ def chat_system_query(
     save_prompt_to_md(user_prompt)
 
     try:
-        client = LLMClient(llm=model)
+        client = LLMClient(llm=model, max_tokens=1024, temperature=0.5)
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

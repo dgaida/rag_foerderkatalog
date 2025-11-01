@@ -746,7 +746,212 @@ button, input, select, textarea {
     background: rgba(6, 182, 212, 0.2);
     color: var(--secondary-color);
 }
+
+.gr-dataframe td:nth-child(3) {  /* 3. Spalte = Thema */
+    min-width: 300px !important;
+    max-width: 500px !important;
+}
+
+/* ===== Examples Table - Volle Breite ===== */
+.gradio-container .gr-samples-table,
+.gradio-container div[data-testid*="sample"],
+.gradio-container .gr-sample-textbox {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+div.gr-form.gr-box > div {
+    width: 100% !important;
+}
+
+/* Spezifische Gradio Examples Wrapper */
+div[id*="example"] {
+    width: 100% !important;
+}
+
+div[id*="example"] table {
+    width: 100% !important;
+    table-layout: auto !important;
+}
+
+div[id*="example"] td,
+div[id*="example"] th {
+    padding: 0.75rem 1rem !important;
+}
+
+/* Examples Container */
+.gr-sample-textbox,
+button[id*="example"] {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* ===== Dropdown - Dunkler Hintergrund ===== */
+select,
+.gr-dropdown,
+div[data-testid="dropdown"],
+.svelte-1gfkn6j select {
+    background: var(--card-bg) !important;
+    color: #ffffff !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+/* Dropdown-Optionen */
+select option {
+    background: var(--card-bg) !important;
+    color: #ffffff !important;
+    padding: 0.5rem !important;
+}
+
+select option:hover,
+select option:focus {
+    background: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Dropdown-Container */
+.wrap.svelte-1gfkn6j.svelte-1gfkn6j,
+div.wrap.svelte-1gfkn6j {
+    background: transparent !important;
+}
+
+/* Dropdown Hover/Focus States */
+select:hover,
+select:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
 """
+
+
+def get_project_details(fkz: str, engine: ProjectSearchEngine) -> str:
+    """Liefert formatierte Detail-Informationen zu einem Projekt.
+
+    Args:
+        fkz: Förderkennzeichen des Projekts
+        engine: ProjectSearchEngine-Instanz
+
+    Returns:
+        str: Formatierte Projekt-Details als Markdown
+    """
+    if engine.df is None or not fkz:
+        return "Keine Projektdaten verfügbar."
+
+    # Suche Projekt anhand FKZ
+    fkz_col = '="FKZ"'
+    if fkz_col not in engine.df.columns:
+        return f"FKZ-Spalte nicht gefunden. Verfügbare Spalten: {', '.join(engine.df.columns)}"
+
+    # Bereinige FKZ (entferne Formatierung)
+    search_fkz = fkz.strip()
+
+    # Finde Projekt
+    matches = engine.df[engine.df[fkz_col].astype(str).str.contains(search_fkz, case=False, na=False)]
+
+    if matches.empty:
+        return f"❌ Kein Projekt mit FKZ '{fkz}' gefunden."
+
+    project = matches.iloc[0]
+
+    # Erstelle detaillierte Ansicht
+    details = f"# 📋 Projekt-Details: {fkz}\n\n"
+
+    # Wichtige Felder zuerst
+    important_fields = [
+        ('="FKZ"', '🔑 Förderkennzeichen'),
+        ('="Zuwendungsempfänger"', '🏢 Zuwendungsempfänger'),
+        ('="Thema"', '📝 Thema'),
+        ('="Fördersumme in EUR"', '💰 Fördersumme'),
+        ('__laufzeit', '📅 Laufzeit'),
+        ('="Laufzeit von"', '📅 Start'),
+        ('="Laufzeit bis"', '📅 Ende'),
+    ]
+
+    for col, label in important_fields:
+        if col in project.index:
+            val = project[col]
+            if pd.notna(val) and str(val).strip() and str(val) != 'nan':
+                if col == '="Fördersumme in EUR"':
+                    try:
+                        val = f"{float(val):,.2f} €"
+                    except:
+                        pass
+                details += f"**{label}:** {val}\n"
+
+    details += "---\n## 📍 Weitere Informationen\n"
+
+    # Alle anderen Felder
+    other_fields = [
+        ('="Ausführende Stelle"', '🏛️ Ausführende Stelle'),
+        ('="Stadt/Gemeinde"', '🏙️ Stadt/Gemeinde'),
+        ('="Postleitzahl"', '📮 PLZ'),
+        ('="Bundesland"', '🗺️ Bundesland'),
+        ('="Verbundprojekt"', '🤝 Verbundprojekt'),
+        ('="Förderprofil"', '📊 Förderprofil'),
+        ('="Klartext Leistungsplansystematik"', '📚 Leistungsplansystematik'),
+        ('="Projektträger"', '👥 Projektträger'),
+    ]
+
+    for col, label in other_fields:
+        if col in project.index:
+            val = project[col]
+            if pd.notna(val) and str(val).strip() and str(val) != 'nan':
+                details += f"• **{label}:** {val}\n"
+
+    return details
+
+
+# ÄNDERUNG 2: Modifiziere die LLM-Antwort-Generierung (in answer_with_context)
+# Füge in src/search/engine.py nach Zeile 252 ein:
+def make_fkz_clickable(answer: str) -> str:
+    """Macht FKZ in der Antwort zu klickbaren Buttons.
+
+    Args:
+        answer: LLM-Antwort mit FKZ-Referenzen
+
+    Returns:
+        str: Antwort mit HTML-Buttons für FKZ
+    """
+    import re
+
+    # Finde alle FKZ-Muster (z.B. 13BDB60030, 01AB1234)
+    pattern = r'\*\*FKZ:\s*([A-Z0-9]+)\*\*'
+
+    def replace_fkz(match):
+        fkz = match.group(1)
+        # Erstelle anklickbaren Button-Style Text
+        return f'**FKZ: [{fkz}](#{fkz})**'
+
+    return re.sub(pattern, replace_fkz, answer)
+
+
+def extract_fkz_from_text(text: str) -> list:
+    """Extrahiert alle FKZ aus einem Text.
+
+    Args:
+        text: Text mit FKZ-Referenzen (z.B. LLM-Antwort)
+
+    Returns:
+        list: Liste von gefundenen FKZ (ohne Duplikate)
+
+    Example:
+        >>> extract_fkz_from_text("Projekt FKZ: 13BDB60030 und FKZ 01AB1234")
+        ['13BDB60030', '01AB1234']
+    """
+    import re
+
+    # Muster: FKZ: 13BDB60030 oder FKZ 01AB1234 (mindestens 8 Zeichen)
+    pattern = r'FKZ[:\s]+([A-Z0-9]{8,})'
+    matches = re.findall(pattern, text, re.IGNORECASE)
+
+    # Duplikate entfernen, Reihenfolge beibehalten
+    seen = set()
+    unique_fkz = []
+    for fkz in matches:
+        if fkz not in seen:
+            seen.add(fkz)
+            unique_fkz.append(fkz)
+
+    return unique_fkz
 
 
 def keyword_search(
@@ -865,14 +1070,8 @@ def hybrid_rank(sem_df: pd.DataFrame, kw_df: pd.DataFrame, k: int) -> pd.DataFra
 
 
 def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
-    """Baut die Gradio-Benutzeroberfläche mit modernem Design.
+    """Baut die Gradio-Benutzeroberfläche mit FKZ-Detail-Ansicht."""
 
-    Args:
-        engine: Initialisierte ProjectSearchEngine-Instanz.
-
-    Returns:
-        gr.Blocks: Konfigurierte Gradio-App.
-    """
     with gr.Blocks(
             title="🧠 RAG Förderkatalog — Intelligente Projektsuche",
             css=CUSTOM_CSS,
@@ -914,7 +1113,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             with gr.Column(scale=3):
                 query_input = gr.Textbox(
                     label="🔍 Suchanfrage",
-                    placeholder="z. B. 'Künstliche Intelligenz Projekte Bayern 2020-2025' oder 'Quantencomputing Hochschulen'",
+                    placeholder="z. B. 'Künstliche Intelligenz Projekte Bayern 2020-2025'",
                     lines=2,
                     elem_classes="input-container"
                 )
@@ -943,7 +1142,6 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                     elem_classes="primary-button"
                 )
 
-        # Results Section
         gr.Markdown("---")
 
         with gr.Tabs():
@@ -964,50 +1162,65 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                     label="Kontextbasierte KI-Antwort",
                     interactive=False,
                     lines=15,
+                    max_lines=15,
                     elem_classes="output-textbox"
                 )
 
-        # Examples Section
+                # FKZ-Dropdown für Projekt-Auswahl
+                gr.Markdown("### 🔑 In der Antwort erwähnte Projekte")
+                fkz_radio = gr.Radio(
+                    label="Wählen Sie ein Projekt für Details aus",
+                    choices=[],
+                    interactive=True,
+                    visible=False,
+                    elem_classes="radio-group"
+                )
+
+                # Detail-Ansicht
+                detail_output = gr.Markdown(
+                    value="",
+                    visible=False,
+                    elem_classes="output-textbox"
+                )
+
+        # Examples
         gr.Markdown("### 💡 Beispielsuchen", elem_classes="examples-header")
 
-        gr.Examples(
-            examples=[
-                ["Künstliche Intelligenz Hochschule Bayern", "hybrid", 20],
-                ["Wasserstoff Energie NRW 2020-2025", "semantic", 15],
-                ["Quantencomputing Forschung", "semantic", 25],
-                ["Klimawandel Digitalisierung", "hybrid", 30],
-                ["Medizintechnik Berlin", "keyword", 10],
-            ],
-            inputs=[query_input, mode, k_slider],
-            label="Klicken Sie auf ein Beispiel zum Ausprobieren"
-        )
+        with gr.Row():
+            gr.Examples(
+                examples=[
+                    ["Künstliche Intelligenz Hochschule Bayern", "hybrid", 20],
+                    ["Wasserstoff Energie NRW 2020-2025", "semantic", 15],
+                    ["Quantencomputing Forschung", "semantic", 25],
+                    ["Klimawandel Digitalisierung", "hybrid", 30],
+                    ["Medizintechnik Berlin", "keyword", 10],
+                ],
+                inputs=[query_input, mode, k_slider],
+                label="Klicken Sie auf ein Beispiel zum Ausprobieren",
+                examples_per_page=5
+            )
 
         # Search Function
         def on_search(query: str, mode_choice: str, k: int):
-            """Führt die Suche durch und generiert Ergebnisse.
-
-            Args:
-                query: Suchanfrage.
-                mode_choice: Gewählter Suchmodus (hybrid/semantic/keyword).
-                k: Anzahl der gewünschten Treffer.
-
-            Returns:
-                Tuple: (DataFrame mit Ergebnissen, LLM-Antwort, Statistik-Markdown)
-            """
+            """Führt die Suche durch und generiert Ergebnisse."""
             logger.info("Suchanfrage: mode=%s, k=%s, query=%s", mode_choice, k, query)
 
             if not query or not query.strip():
                 return (
                     pd.DataFrame(),
                     "⚠️ Bitte geben Sie eine Suchanfrage ein.",
-                    ""
+                    "",
+                    gr.update(choices=[], visible=False),
+                    gr.update(visible=False, value="")
                 )
 
             if engine.df is None:
                 return (
                     pd.DataFrame(),
-                    "❌ DataFrame nicht geladen. Bitte starten Sie die Anwendung neu.",
-                    ""
+                    "❌ DataFrame nicht geladen.",
+                    "",
+                    gr.update(choices=[], visible=False),
+                    gr.update(visible=False, value="")
                 )
 
             sem_df = pd.DataFrame()
@@ -1016,8 +1229,10 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             try:
                 if mode_choice in ("hybrid", "semantic"):
                     sem_df = engine.search(query, k=int(k))
+                    logger.info("Semantische Suche: %d Treffer gefunden", len(sem_df))
                 if mode_choice in ("hybrid", "keyword"):
                     kw_df = keyword_search(engine.df, query, top_n=5)
+                    logger.info("Keyword-Suche: %d Treffer gefunden", len(kw_df))
 
                 if mode_choice == "semantic":
                     final = sem_df.head(int(k)) if not sem_df.empty else pd.DataFrame()
@@ -1029,8 +1244,10 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 if final is None or final.empty:
                     return (
                         pd.DataFrame(),
-                        "🔍 Keine Treffer gefunden. Versuchen Sie andere Suchbegriffe.",
-                        ""
+                        "🔍 Keine Treffer gefunden.",
+                        "",
+                        gr.update(choices=[], visible=False),
+                        gr.update(visible=False, value="")
                     )
 
                 # Display columns
@@ -1061,7 +1278,6 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 total_funding = final['="Fördersumme in EUR"'].sum() if '="Fördersumme in EUR"' in final.columns else 0
 
                 if isinstance(total_funding, str):
-                    # Falls bereits formatiert wurde
                     total_funding = 0
 
                 stats_md = f"""
@@ -1076,24 +1292,75 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 # LLM Antwort
                 try:
                     answer = engine.answer_with_context(query)
+
+                    # Extrahiere FKZ aus Antwort
+                    fkz_list = extract_fkz_from_text(answer)
+
+                    # Erstelle Dropdown-Choices mit FKZ und Empfänger
+                    fkz_choices = []
+                    for fkz in fkz_list:
+                        # Suche Empfänger für bessere Anzeige
+                        if '="FKZ"' in final.columns:
+                            match = final[final['="FKZ"'].astype(str).str.contains(fkz, case=False, na=False)]
+                            if not match.empty:
+                                empfaenger = match.iloc[0].get('="Zuwendungsempfänger"', 'N/A')
+                                # Kürze Empfänger-Namen wenn zu lang
+                                if len(empfaenger) > 60:
+                                    empfaenger = empfaenger[:57] + "..."
+                                fkz_choices.append((f"{fkz} — {empfaenger}", fkz))
+                            else:
+                                fkz_choices.append((fkz, fkz))
+
+                    dropdown_update = gr.update(
+                        choices=fkz_choices,
+                        visible=len(fkz_choices) > 0,
+                        value=None
+                    )
+
                 except Exception as e:
                     logger.exception("Fehler beim LLM-Abruf: %s", e)
                     answer = f"⚠️ LLM-Antwort konnte nicht generiert werden.\n\n**Fehler**: {str(e)}"
+                    dropdown_update = gr.update(choices=[], visible=False)
 
-                return display_df, answer, stats_md
+                return (
+                    display_df,
+                    answer,
+                    stats_md,
+                    dropdown_update,
+                    gr.update(visible=False, value="")  # detail_output verstecken bei neuer Suche
+                )
 
             except Exception as e:
                 logger.exception("Fehler während der Suche: %s", e)
                 return (
                     pd.DataFrame(),
                     f"❌ Ein Fehler ist aufgetreten: {str(e)}",
-                    ""
+                    "",
+                    gr.update(choices=[], visible=False),
+                    gr.update(visible=False, value="")
                 )
 
+        # Detail-Anzeige-Funktion
+        def show_fkz_detail(fkz):
+            """Zeigt Details für ausgewähltes FKZ."""
+            if not fkz:
+                return gr.update(visible=False, value="")
+
+            details = get_project_details(fkz, engine)
+            return gr.update(visible=True, value=details)
+
+        # Event Handlers
         search_btn.click(
             on_search,
             inputs=[query_input, mode, k_slider],
-            outputs=[result_table, llm_answer, stats_output]
+            outputs=[result_table, llm_answer, stats_output, fkz_radio, detail_output]
+        )
+
+        # Dropdown-Auswahl zeigt Details
+        fkz_radio.change(
+            show_fkz_detail,
+            inputs=[fkz_radio],
+            outputs=[detail_output]
         )
 
         # Footer

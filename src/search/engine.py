@@ -283,7 +283,7 @@ class ProjectSearchEngine:
             results['__score'] = scores
             results = results.sort_values('__score', ascending=False)
 
-            logger.info("Suche nach '%s' lieferte %d Treffer", query, len(results))
+            logger.info("Semantische Suche nach '%s' lieferte %d Treffer", query, len(results))
             return results
 
         except Exception as e:
