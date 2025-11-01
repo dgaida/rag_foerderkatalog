@@ -56,41 +56,49 @@ body {
     padding: 2rem !important;
 }
 
-/* ===== KRITISCH: Selektive Textfarben ===== */
-/* Nur spezifische Elemente weiß, NICHT alles */
-h1, h2, h3, h4, h5, h6,
-p:not(.gr-input p),
-label:not(.gr-input label),
-legend,
-.markdown,
-.gr-prose {
-    color: #ffffff !important;
-}
+/* ===== KRITISCH: Spezifische Gradio-Selektoren ===== */
 
-/* Input-Container: Labels weiß, aber Input-Felder dunkel */
-.gr-box label,
-.gr-form label,
-fieldset legend {
+/* Labels und Spans - WEISS */
+span.svelte-g2oxp3,
+span[data-testid="block-info"],
+.svelte-g2oxp3 {
     color: #ffffff !important;
     font-weight: 600 !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* INPUTS: Dunkler Text auf hellem Grund */
-input[type="text"],
-input[type="number"],
-input[type="search"],
-textarea:not([readonly]) {
+/* Radio Button Spans - WEISS */
+label.svelte-1bx8sav span.svelte-1bx8sav,
+.svelte-1bx8sav span {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Slider Labels und Werte */
+label.svelte-1kajgn1,
+.svelte-1kajgn1 label,
+span.min_value,
+span.max_value {
+    color: #ffffff !important;
+}
+
+/* Number Input im Slider - DUNKEL AUF HELL */
+input.svelte-1kajgn1[type="number"] {
     background: #f8fafc !important;
     color: #1e293b !important;
     border: 2px solid var(--border-color) !important;
+    font-weight: 600 !important;
 }
 
-/* READ-ONLY Textareas: Heller auf dunklem Grund */
-textarea[readonly] {
-    background: rgba(15, 23, 42, 0.9) !important;
+/* Textareas - Unterscheiden zwischen editierbar und readonly */
+textarea.svelte-1ae7ssi:not([disabled]) {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+textarea.svelte-1ae7ssi[disabled] {
+    background: rgba(15, 23, 42, 0.95) !important;
     color: #ffffff !important;
-    border: 2px solid var(--border-color) !important;
 }
 
 /* ===== Header Styling ===== */
@@ -256,28 +264,27 @@ legend {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* ===== Slider - WEISSE ZAHL AUF DUNKLEM GRUND ===== */
+/* ===== Slider - SCHWARZER TEXT AUF HELLEM GRUND ===== */
 .slider-container {
-    padding: 1rem 0 !important;
-    background: rgba(15, 23, 42, 0.6) !important;
+    padding: 1rem !important;
+    background: rgba(30, 41, 59, 0.6) !important;
     border-radius: 8px !important;
 }
 
-.slider-container label,
-.slider-container span,
-.slider-container input {
+.slider-container label {
     color: #ffffff !important;
+    font-weight: 600 !important;
 }
 
-/* Slider-Wert-Anzeige */
-input[type="number"].svelte-1b6s6s,
-.number-input {
-    background: rgba(15, 23, 42, 0.9) !important;
-    color: #ffffff !important;
+/* Slider-Wert-Anzeige (Number Input) */
+input[type="number"] {
+    background: #f8fafc !important;
+    color: #1e293b !important;
     border: 2px solid var(--border-color) !important;
     border-radius: 6px !important;
     padding: 0.5rem !important;
     font-weight: 600 !important;
+    font-size: 1rem !important;
 }
 
 input[type="range"] {
@@ -317,30 +324,40 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: var(--shadow-md);
 }
 
-/* ===== DataTable - WEISSE SCHRIFT AUF DUNKLEM GRUND ===== */
+/* ===== DataTable - MIT SCROLLBAR UND KONTRAST ===== */
 .dataframe,
 table,
-.gr-table {
+.gr-table,
+div[class*="table-wrap"] {
     background: var(--dark-bg) !important;
     border-radius: var(--border-radius) !important;
-    overflow: hidden;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: 600px !important;
     box-shadow: var(--shadow-md) !important;
+    display: block !important;
 }
 
 .dataframe thead,
 table thead,
 .gr-table thead {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
 }
 
 .dataframe thead th,
 table thead th,
-.gr-table thead th {
+.gr-table thead th,
+th {
     color: #ffffff !important;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
     font-weight: 700 !important;
     padding: 1rem !important;
     text-align: left !important;
     border-bottom: 2px solid var(--border-color) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
 }
 
 .dataframe tbody tr,
@@ -348,7 +365,7 @@ table tbody tr,
 .gr-table tbody tr {
     border-bottom: 1px solid var(--border-color) !important;
     transition: var(--transition) !important;
-    background: rgba(15, 23, 42, 0.6) !important;
+    background: rgba(15, 23, 42, 0.8) !important;
 }
 
 .dataframe tbody tr:hover,
@@ -359,27 +376,40 @@ table tbody tr:hover,
 
 .dataframe tbody td,
 table tbody td,
-.gr-table tbody td {
+.gr-table tbody td,
+td {
     color: #ffffff !important;
+    background: transparent !important;
     padding: 0.75rem 1rem !important;
     font-weight: 500 !important;
 }
 
 /* Gradio spezifische DataFrame-Klassen */
-.gr-dataframe,
-.gr-dataframe * {
-    color: #ffffff !important;
+.gr-dataframe {
+    overflow: auto !important;
+    max-height: 600px !important;
 }
 
-.gr-dataframe .cell-wrap {
+.gr-dataframe table {
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+
+.gr-dataframe th {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+    color: #ffffff !important;
+    position: sticky !important;
+    top: 0 !important;
+}
+
+.gr-dataframe td {
+    color: #ffffff !important;
     background: rgba(15, 23, 42, 0.6) !important;
 }
 
-/* ===== Textbox (LLM Answer) - MIT SCROLLBAR ===== */
-.output-textbox,
+/* ===== Textbox (LLM Answer) - WEISS AUF DUNKEL MIT SCROLLBAR ===== */
 textarea[readonly],
-.gr-textbox {
-    background: rgba(15, 23, 42, 0.9) !important;
+.output-textbox {
+    background: rgba(15, 23, 42, 0.95) !important;
     border: 2px solid var(--border-color) !important;
     border-radius: var(--border-radius) !important;
     color: #ffffff !important;
@@ -394,10 +424,21 @@ textarea[readonly],
     word-wrap: break-word !important;
 }
 
-/* Spezifischer für LLM-Antwort-Textbox */
-textarea[data-testid="textbox"] {
-    overflow-y: auto !important;
-    max-height: 600px !important;
+/* Alle Textboxen die interaktiv sind: dunkel auf hell */
+textarea:not([readonly]) {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+/* Spezifische Gradio Textbox */
+.gr-textbox textarea[readonly] {
+    background: rgba(15, 23, 42, 0.95) !important;
+    color: #ffffff !important;
+}
+
+.gr-textbox textarea:not([readonly]) {
+    background: #f8fafc !important;
+    color: #1e293b !important;
 }
 
 /* ===== Tabs ===== */
@@ -1091,5 +1132,4 @@ if __name__ == "__main__":
         logger.exception("Fehler beim Erzeugen der Embeddings beim App-Start")
     demo = build_ui(engine)
     demo.launch(share=False, inbrowser=True)
-
     
