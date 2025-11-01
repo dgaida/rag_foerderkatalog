@@ -1305,8 +1305,8 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                             if not match.empty:
                                 empfaenger = match.iloc[0].get('="Zuwendungsempfänger"', 'N/A')
                                 # Kürze Empfänger-Namen wenn zu lang
-                                if len(empfaenger) > 60:
-                                    empfaenger = empfaenger[:57] + "..."
+                                if len(empfaenger) > 15:
+                                    empfaenger = empfaenger[:12] + "..."
                                 fkz_choices.append((f"{fkz} — {empfaenger}", fkz))
                             else:
                                 fkz_choices.append((fkz, fkz))

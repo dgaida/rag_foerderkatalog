@@ -153,7 +153,7 @@ def get_improved_system_prompt() -> str:
 
 **Ausgabeformat:**
 - Beginne mit einer knappen Zusammenfassung (1-2 Sätze)
-- Liste relevante Projekte mit FKZ auf
+- Liste relevante Projekte mit FKZ auf. Beginne jedes Element der Liste mit: "- **FKZ: [...]**". [...] ist ein Platzhalte für das FKZ, bspw.: "03KB045A".
 - Schließe mit statistischen Eckdaten ab (Anzahl Projekte, Gesamtfördersumme, Zeitraum)"""
 
 
