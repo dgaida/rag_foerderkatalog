@@ -31,3 +31,4 @@ dependencies:
       - faker>=22.0.0
       - freezegun>=1.4.0
       - responses>=0.24.1
+      - git+https://github.com/dgaida/llm_client.git

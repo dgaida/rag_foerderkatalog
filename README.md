@@ -15,15 +15,15 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 
 ## 🚀 Features
 
-✅ **Semantische Suche** — auf Basis von Embeddings (Ollama + FAISS)  
-✅ **Keyword-basierte Suche** — string- und tokenbasiert, schnelle Ergänzung zur semantischen Suche  
-✅ **Hybride Suche** — Kombination beider Ansätze mit gewichteter Ergebnisaggregation  
-✅ **Erweiterte Embeddings** — inkl. Laufzeit-Extraktion (z.B. "2002 - 2005"), Bundesland, Förderprofil  
-✅ **Batch-Embeddings** — für große CSV-Dateien (192 MB Förderkatalog)  
-✅ **RAG-Pipeline** — kontextbasiertes LLM (Antworten auf Suchanfragen)  
-✅ **Gradio GUI** — intuitive Weboberfläche zur Suche und Ergebnisexploration  
-✅ **Logging & Persistenz** — automatisch im `logs/` Verzeichnis  
-✅ **Unit Tests** — umfassende Test-Suite mit pytest (>80% Coverage)  
+✅ **Semantische Suche** — auf Basis von Embeddings (Ollama + FAISS)
+✅ **Keyword-basierte Suche** — string- und tokenbasiert, schnelle Ergänzung zur semantischen Suche
+✅ **Hybride Suche** — Kombination beider Ansätze mit gewichteter Ergebnisaggregation
+✅ **Erweiterte Embeddings** — inkl. Laufzeit-Extraktion (z.B. "2002 - 2005"), Bundesland, Förderprofil
+✅ **Batch-Embeddings** — für große CSV-Dateien (192 MB Förderkatalog)
+✅ **RAG-Pipeline** — kontextbasiertes LLM (Antworten auf Suchanfragen)
+✅ **Gradio GUI** — intuitive Weboberfläche zur Suche und Ergebnisexploration
+✅ **Logging & Persistenz** — automatisch im `logs/` Verzeichnis
+✅ **Unit Tests** — umfassende Test-Suite mit pytest (>80% Coverage)
 
 ---
 
@@ -71,7 +71,9 @@ rag-foerderprojekte/
 ```bash
 conda env create -f environment.yml
 conda activate rag_foerderkatalog
-pip install git+https://github.com/dgaida/llm_client.git
+
+# ODER mit pip (empfohlen für vollständige Installation)
+pip install -e .
 ```
 
 ### 2️⃣ Ollama & Modelle installieren
@@ -305,4 +307,4 @@ Das Projekt hat wertvolle Ideen und Schnittstellen geliefert, auf denen diese An
 
 ---
 
-**© 2025 – RAG Förderkatalog**  
+**© 2025 – RAG Förderkatalog**

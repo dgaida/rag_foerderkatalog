@@ -15,7 +15,7 @@ Vielen Dank für dein Interesse, zu diesem Projekt beizutragen! 🎉
    # Mit Conda
    conda env create -f environment.yml
    conda activate rag_foerderkatalog
-   
+
    # Oder mit pip
    make install-dev
    ```
@@ -151,14 +151,14 @@ def process_data(
     threshold: float = 0.5
 ) -> List[Dict[str, Any]]:
     """Process dataframe and return filtered results.
-    
+
     Args:
         data: Input dataframe with project data.
         threshold: Minimum score threshold. Defaults to 0.5.
-    
+
     Returns:
         List of dictionaries containing filtered results.
-    
+
     Raises:
         ValueError: If data is empty.
     """

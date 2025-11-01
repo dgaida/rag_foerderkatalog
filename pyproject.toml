@@ -33,6 +33,7 @@ dependencies = [
     "tqdm>=4.66.0",
     "ollama>=0.3.0",
     "python-dotenv>=1.0.0",
+    "llm_client @ git+https://github.com/dgaida/llm_client.git",
 ]
 
 [project.optional-dependencies]

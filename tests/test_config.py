@@ -19,7 +19,7 @@ from src.config import (
     OLLAMA_EMBED_MODEL,
     LLM_DEFAULT_MODEL,
     TOP_K_DEFAULT,
-    MAX_DOCS_FOR_LLM
+    MAX_DOCS_FOR_LLM,
 )
 
 
@@ -113,9 +113,8 @@ class TestPathTypes:
 
     def test_all_paths_are_path_objects(self):
         """Test: Alle Pfad-Konstanten sind Path-Objekte."""
-        paths = [ROOT, INPUT_CSV, DATA_DIR, EMBEDDINGS_FILE, 
-                 FAISS_INDEX_FILE, EMBED_MAP_FILE, LOG_DIR]
-        
+        paths = [ROOT, INPUT_CSV, DATA_DIR, EMBEDDINGS_FILE, FAISS_INDEX_FILE, EMBED_MAP_FILE, LOG_DIR]
+
         for path in paths:
             assert isinstance(path, Path), f"{path} ist kein Path-Objekt"
 
@@ -133,12 +132,12 @@ class TestConfigImmutability:
         # In der Praxis wird dies durch mypy/type-checker verifiziert
         from typing import get_type_hints
         import src.config as config_module
-        
-        hints = get_type_hints(config_module, include_extras=True)
-        
+
+        get_type_hints(config_module, include_extras=True)
+
         # Prüfe, dass wichtige Konstanten existieren
-        assert 'INPUT_CSV' in dir(config_module)
-        assert 'OLLAMA_EMBED_MODEL' in dir(config_module)
+        assert "INPUT_CSV" in dir(config_module)
+        assert "OLLAMA_EMBED_MODEL" in dir(config_module)
 
 
 if __name__ == "__main__":

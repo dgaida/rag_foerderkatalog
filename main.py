@@ -16,8 +16,6 @@ from __future__ import annotations
 import argparse
 import logging
 import json
-from pathlib import Path
-from typing import Iterable
 
 from src.utils.logging_config import setup_logging, get_logger
 from src.search.engine import ProjectSearchEngine
@@ -61,11 +59,7 @@ def save_progress(indexed_rows: int) -> None:
         logger.error("Fehler beim Speichern des Fortschritts: %s", e)
 
 
-def build_embeddings_incremental(
-        engine: ProjectSearchEngine,
-        batch_size: int = 5000,
-        force_rebuild: bool = False
-) -> None:
+def build_embeddings_incremental(engine: ProjectSearchEngine, batch_size: int = 5000, force_rebuild: bool = False) -> None:
     """Indiziert inkrementell weitere Projekte.
 
     Bei jedem Aufruf werden batch_size weitere Zeilen indiziert,
@@ -99,7 +93,7 @@ def build_embeddings_incremental(
         start_idx,
         end_idx,
         total_rows,
-        (start_idx / total_rows) * 100
+        (start_idx / total_rows) * 100,
     )
 
     # Indiziere den aktuellen Batch
@@ -116,9 +110,9 @@ def build_embeddings_incremental(
             '="Ausführende Stelle"',
             '="Stadt/Gemeinde"',
             '="Bundesland"',
-            '__laufzeit',
+            "__laufzeit",
             '="Förderprofil"',
-            '="Verbundprojekt"'
+            '="Verbundprojekt"',
         ]:
             if col in engine.df.columns:
                 val = row.get(col)
@@ -140,12 +134,7 @@ def build_embeddings_incremental(
                 # Fortschritt alle 100 Zeilen loggen
                 if added % 100 == 0:
                     current = start_idx + added
-                    logger.info(
-                        "⏳ Fortschritt: %d/%d (%.1f%%)",
-                        current,
-                        total_rows,
-                        (current / total_rows) * 100
-                    )
+                    logger.info("⏳ Fortschritt: %d/%d (%.1f%%)", current, total_rows, (current / total_rows) * 100)
             else:
                 logger.warning("⚠️ Leerer Embedding-Vektor für idx=%d", idx)
         except Exception as e:
@@ -157,11 +146,10 @@ def build_embeddings_incremental(
 
     remaining = total_rows - end_idx
     logger.info(
-        "✅ Batch abgeschlossen: %d Embeddings hinzugefügt. "
-        "Noch %d Projekte verbleibend (%.1f%%)",
+        "✅ Batch abgeschlossen: %d Embeddings hinzugefügt. " "Noch %d Projekte verbleibend (%.1f%%)",
         added,
         remaining,
-        (remaining / total_rows) * 100
+        (remaining / total_rows) * 100,
     )
 
     if end_idx >= total_rows:
@@ -171,27 +159,11 @@ def build_embeddings_incremental(
 def parse_args():
     parser = argparse.ArgumentParser(description="Startet die RAG Förderprojekte App")
     parser.add_argument(
-        "--batch-size",
-        "-b",
-        type=int,
-        default=5000,
-        help="Anzahl der Zeilen, die pro Start indiziert werden (Standard: 5000)"
+        "--batch-size", "-b", type=int, default=5000, help="Anzahl der Zeilen, die pro Start indiziert werden (Standard: 5000)"
     )
-    parser.add_argument(
-        "--no-embeddings",
-        action="store_true",
-        help="Überspringe Indizierung (nur App starten)"
-    )
-    parser.add_argument(
-        "--force-rebuild",
-        action="store_true",
-        help="Index neu aufbauen (von vorne beginnen)"
-    )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        help="Log-Level (DEBUG/INFO/WARNING/ERROR)"
-    )
+    parser.add_argument("--no-embeddings", action="store_true", help="Überspringe Indizierung (nur App starten)")
+    parser.add_argument("--force-rebuild", action="store_true", help="Index neu aufbauen (von vorne beginnen)")
+    parser.add_argument("--log-level", default="INFO", help="Log-Level (DEBUG/INFO/WARNING/ERROR)")
     return parser.parse_args()
 
 
@@ -219,11 +191,7 @@ def main():
                 engine.faiss.clear()
                 save_progress(0)
 
-            build_embeddings_incremental(
-                engine,
-                batch_size=args.batch_size,
-                force_rebuild=args.force_rebuild
-            )
+            build_embeddings_incremental(engine, batch_size=args.batch_size, force_rebuild=args.force_rebuild)
         except Exception:
             logger.exception("❌ Inkrementelle Indizierung fehlgeschlagen")
             raise
@@ -233,6 +201,7 @@ def main():
     # Starte Gradio App
     try:
         from src.app import build_ui
+
         demo = build_ui(engine)
 
         logger.info("🌐 Starte Gradio-Oberfläche...")
@@ -243,6 +212,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import pandas as pd  # type: ignore
-
     main()

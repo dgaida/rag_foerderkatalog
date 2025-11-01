@@ -18,6 +18,7 @@ class FaissStore:
     - Hinzufügen von Embeddings (einzeln)
     - Suche nach k nächsten Nachbarn
     """
+
     def __init__(self, dim: int | None = None) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.dim = dim
@@ -60,14 +61,38 @@ class FaissStore:
             self.persist()
 
     def search(self, vector: List[float], k: int = 5) -> List[Tuple[float, str]]:
+        """Sucht die k nächsten Nachbarn zu einem gegebenen Vektor.
+
+        Führt eine Cosine-Similarity-Suche im FAISS-Index durch und gibt
+        die k ähnlichsten Dokumente zurück, sortiert nach Relevanz.
+
+        Args:
+            vector: Embedding-Vektor als Liste von Floats.
+            k: Anzahl der zurückzugebenden nächsten Nachbarn. Defaults to 5.
+
+        Returns:
+            List[Tuple[float, str]]: Liste von Tupeln (Similarity-Score, doc_id),
+                sortiert nach absteigendem Score. Leere Liste wenn Index leer ist.
+
+        Example:
+            >>> store = FaissStore()
+            >>> store.add([0.1] * 768, doc_id="doc_1")
+            >>> results = store.search([0.1] * 768, k=5)
+            >>> results[0]
+            (0.9999, 'doc_1')
+
+        Note:
+            Der Input-Vektor wird automatisch L2-normalisiert für Cosine-Similarity.
+            Scores liegen zwischen -1 und 1, wobei höhere Werte bessere Matches bedeuten.
+        """
         if self.index is None or self.index.ntotal == 0:
             return []
         k = min(k, self.index.ntotal)
         vec = np.array(vector, dtype="float32").reshape(1, -1)
         faiss.normalize_L2(vec)
-        D, I = self.index.search(vec, k)
+        distances, indices = self.index.search(vec, k)
         results: List[Tuple[float, str]] = []
-        for dist, idx in zip(D[0], I[0]):
+        for dist, idx in zip(distances[0], indices[0]):
             if idx == -1:
                 continue
             fid = str(idx)

@@ -44,11 +44,7 @@ def save_prompt_to_md(prompt: str, folder: str = "logs/prompts") -> Path:
     return filename
 
 
-def chat_system_query(
-        system_prompt: str,
-        user_prompt: str,
-        model: Optional[str] = None
-) -> str:
+def chat_system_query(system_prompt: str, user_prompt: str, model: Optional[str] = None) -> str:
     """Führt eine Chat-Anfrage an ein LLM über LLMClient aus.
 
     Args:

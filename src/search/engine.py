@@ -10,20 +10,13 @@ Dieses Modul implementiert die Kernfunktionalität für die Suche in Förderproj
 from __future__ import annotations
 
 import pandas as pd
-import numpy as np
 from typing import List, Optional
 from pathlib import Path
-import logging
 import re
 
 from ..utils.logging_config import get_logger
 from ..embeddings.faiss_store import FaissStore
-from ..llm.llm_wrapper import (
-    embed_text,
-    chat_system_query,
-    get_improved_system_prompt,
-    build_improved_user_prompt
-)
+from ..llm.llm_wrapper import embed_text, chat_system_query, get_improved_system_prompt, build_improved_user_prompt
 from ..config import INPUT_CSV, TOP_K_DEFAULT, MAX_DOCS_FOR_LLM
 
 logger = get_logger(__name__)
@@ -76,7 +69,7 @@ class ProjectSearchEngine:
             return None
 
         # Suche nach 4-stelliger Jahreszahl
-        match = re.search(r'\b(19|20)\d{2}\b', date_str)
+        match = re.search(r"\b(19|20)\d{2}\b", date_str)
         if match:
             try:
                 return int(match.group(0))
@@ -98,8 +91,8 @@ class ProjectSearchEngine:
             >>> self._create_runtime_string(row)
             "2002 - 2005"
         """
-        start_year = self._extract_year(row.get('="Laufzeit von"', ''))
-        end_year = self._extract_year(row.get('="Laufzeit bis"', ''))
+        start_year = self._extract_year(row.get('="Laufzeit von"', ""))
+        end_year = self._extract_year(row.get('="Laufzeit bis"', ""))
 
         if start_year and end_year:
             return f"{start_year} - {end_year}"
@@ -127,36 +120,26 @@ class ProjectSearchEngine:
         if not self.csv_file.exists():
             raise FileNotFoundError(f"CSV-Datei nicht gefunden: {self.csv_file}")
 
-        df = pd.read_csv(self.csv_file, sep=';', encoding='latin1', low_memory=False)
+        df = pd.read_csv(self.csv_file, sep=";", encoding="latin1", low_memory=False)
 
         # Entferne Excel-Formatierung von allen String-Spalten
         for col in df.columns:
             if df[col].dtype == object:
-                df[col] = (df[col]
-                           .astype(str)
-                           .str.replace('="', '', regex=False)
-                           .str.replace('"', '', regex=False))
+                df[col] = df[col].astype(str).str.replace('="', "", regex=False).str.replace('"', "", regex=False)
 
         # Bereinige Fördersumme und konvertiere zu numerisch
         if '="Fördersumme in EUR"' in df.columns:
             df['="Fördersumme in EUR"'] = (
-                df['="Fördersumme in EUR"']
-                .astype(str)
-                .str.replace('.', '', regex=False)
-                .str.replace(',', '.', regex=False)
+                df['="Fördersumme in EUR"'].astype(str).str.replace(".", "", regex=False).str.replace(",", ".", regex=False)
             )
-            df['="Fördersumme in EUR"'] = pd.to_numeric(
-                df['="Fördersumme in EUR"'],
-                errors='coerce'
-            )
+            df['="Fördersumme in EUR"'] = pd.to_numeric(df['="Fördersumme in EUR"'], errors="coerce")
 
         # Erstelle Laufzeit-Spalte
-        df['__laufzeit'] = df.apply(self._create_runtime_string, axis=1)
+        df["__laufzeit"] = df.apply(self._create_runtime_string, axis=1)
 
         self.df = df
         logger.info("CSV geladen: %d Zeilen, %d Spalten", df.shape[0], df.shape[1])
-        logger.info("Laufzeit-Spalte erstellt mit %d gültigen Einträgen",
-                    (df['__laufzeit'] != '').sum())
+        logger.info("Laufzeit-Spalte erstellt mit %d gültigen Einträgen", (df["__laufzeit"] != "").sum())
 
     def _build_embedding_text(self, row: pd.Series) -> str:
         """Erstellt den Text für Embedding-Erzeugung aus einer Projektzeile.
@@ -177,24 +160,21 @@ class ProjectSearchEngine:
             '="Ausführende Stelle"',
             '="Stadt/Gemeinde"',
             '="Bundesland"',
-            '__laufzeit',  # Neu: Laufzeit-Information
+            "__laufzeit",  # Neu: Laufzeit-Information
             '="Förderprofil"',
-            '="Verbundprojekt"'
+            '="Verbundprojekt"',
         ]
 
         parts = []
         for field in text_fields:
             if field in row.index:
                 val = row.get(field)
-                if pd.notna(val) and str(val).strip() and str(val) != 'nan':
+                if pd.notna(val) and str(val).strip() and str(val) != "nan":
                     parts.append(str(val))
 
-        return '. '.join(parts) if parts else ''
+        return ". ".join(parts) if parts else ""
 
-    def build_embeddings_if_missing(
-            self,
-            text_fields: Optional[List[str]] = None
-    ) -> None:
+    def build_embeddings_if_missing(self, text_fields: Optional[List[str]] = None) -> None:
         """Erstellt Embeddings für alle Projekte, falls FAISS-Index leer ist.
 
         Args:
@@ -209,16 +189,10 @@ class ProjectSearchEngine:
             raise RuntimeError("Dataframe nicht geladen. Rufe load_and_clean() auf.")
 
         if self.faiss.index is not None and self.faiss.index.ntotal > 0:
-            logger.info(
-                "FAISS enthält bereits %d Vektoren, überspringe Embedding-Erstellung.",
-                self.faiss.index.ntotal
-            )
+            logger.info("FAISS enthält bereits %d Vektoren, überspringe Embedding-Erstellung.", self.faiss.index.ntotal)
             return
 
-        logger.info(
-            "Erzeuge Embeddings für %d Dokumente (kann lange dauern)...",
-            len(self.df)
-        )
+        logger.info("Erzeuge Embeddings für %d Dokumente (kann lange dauern)...", len(self.df))
 
         for idx, row in self.df.iterrows():
             text = self._build_embedding_text(row)
@@ -280,8 +254,8 @@ class ProjectSearchEngine:
             indices = [int(doc_id) for _, doc_id in hits]
             results = self.df.iloc[indices].copy()
             scores = [score for score, _ in hits]
-            results['__score'] = scores
-            results = results.sort_values('__score', ascending=False)
+            results["__score"] = scores
+            results = results.sort_values("__score", ascending=False)
 
             logger.info("Semantische Suche nach '%s' lieferte %d Treffer", query, len(results))
             return results
@@ -310,12 +284,12 @@ class ProjectSearchEngine:
         # Erstelle detaillierte Snippets
         snippets = []
         for i, (_, row) in enumerate(results.head(MAX_DOCS_FOR_LLM).iterrows(), 1):
-            fkz = row.get('="FKZ"', 'N/A')
-            emp = row.get('="Zuwendungsempfänger"', 'N/A')
-            thema = row.get('="Thema"', 'N/A')
-            summe = row.get('="Fördersumme in EUR"', 'N/A')
-            laufzeit = row.get('__laufzeit', 'N/A')
-            bundesland = row.get('="Bundesland"', 'N/A')
+            fkz = row.get('="FKZ"', "N/A")
+            emp = row.get('="Zuwendungsempfänger"', "N/A")
+            thema = row.get('="Thema"', "N/A")
+            summe = row.get('="Fördersumme in EUR"', "N/A")
+            laufzeit = row.get("__laufzeit", "N/A")
+            bundesland = row.get('="Bundesland"', "N/A")
 
             snippet = (
                 f"{i}. **FKZ**: {fkz}\n"
