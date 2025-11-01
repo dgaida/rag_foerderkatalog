@@ -615,42 +615,41 @@ p, span, div, .markdown {
     font-weight: 700 !important;
 }
 
-/* ===== Accordion Styling - WEISSER TEXT ===== */
-.gr-accordion,
-.accordion,
-details {
-    background: rgba(15, 23, 42, 0.8) !important;
-    border: 2px solid var(--border-color) !important;
-    border-radius: var(--border-radius) !important;
-}
-
-.gr-accordion-header,
-.accordion-header,
-summary,
-details summary {
+/* ===== Accordion - EXAKTE SELEKTOREN ===== */
+button.label-wrap.svelte-1w6vloh {
+    background: rgba(99, 102, 241, 0.3) !important;
     color: #ffffff !important;
     font-weight: 700 !important;
     padding: 1rem !important;
-    background: rgba(99, 102, 241, 0.2) !important;
-    cursor: pointer !important;
-    border-radius: var(--border-radius) !important;
+    border-radius: 8px !important;
 }
 
-details[open] summary {
-    border-bottom: 2px solid var(--border-color) !important;
-    margin-bottom: 1rem !important;
-}
-
-/* Accordion Content */
-.accordion-content,
-details > *:not(summary) {
+button.label-wrap.svelte-1w6vloh span.svelte-1w6vloh {
     color: #ffffff !important;
-    padding: 1rem !important;
+    font-weight: 700 !important;
 }
 
-/* Statistik-Markdown in Accordion */
-.markdown h3,
-.markdown p {
+/* Accordion Content - WEISSER TEXT */
+.prose.svelte-lag733 {
+    color: #ffffff !important;
+}
+
+.prose.svelte-lag733 *,
+.prose.svelte-lag733 h3,
+.prose.svelte-lag733 p,
+.prose.svelte-lag733 ul,
+.prose.svelte-lag733 li,
+.prose.svelte-lag733 strong {
+    color: #ffffff !important;
+}
+
+/* Markdown Content */
+span.md.svelte-7ddecg.prose,
+.md.svelte-7ddecg *,
+.md.svelte-7ddecg h3,
+.md.svelte-7ddecg p,
+.md.svelte-7ddecg ul,
+.md.svelte-7ddecg li {
     color: #ffffff !important;
 }
 
@@ -1132,4 +1131,3 @@ if __name__ == "__main__":
         logger.exception("Fehler beim Erzeugen der Embeddings beim App-Start")
     demo = build_ui(engine)
     demo.launch(share=False, inbrowser=True)
-    
