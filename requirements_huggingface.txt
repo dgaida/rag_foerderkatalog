@@ -1,0 +1,13 @@
+# Optional HuggingFace Embeddings Support
+# Installieren Sie diese Dependencies wenn Sie HuggingFace-Embeddings verwenden möchten
+
+# LlamaIndex HuggingFace Integration
+llama-index-embeddings-huggingface>=0.2.0
+
+# Core Dependencies (bereits in requirements.txt)
+# torch>=2.0.0  # Wird automatisch von HuggingFace installiert
+# transformers>=4.30.0  # Wird automatisch installiert
+# sentence-transformers>=2.2.0  # Wird automatisch installiert
+
+# Installation:
+# pip install -r requirements_huggingface.txt

@@ -5,48 +5,85 @@ import faiss
 import json
 from typing import List, Tuple
 
+from ..config import get_index_files, EmbeddingProvider
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-INDEX_FILE = DATA_DIR / "vector.index"
-MAP_FILE = DATA_DIR / "embeddings_map.json"
 
 
 class FaissStore:
     """Minimaler FAISS-Wrapper zum Persistieren von Embeddings.
 
     Funktionen:
-    - Laden / Speichern Index
+    - Laden / Speichern Index (provider-spezifisch)
     - Hinzufügen von Embeddings (einzeln)
     - Suche nach k nächsten Nachbarn
+
+    Attributes:
+        provider: Embedding-Provider ("ollama" oder "huggingface")
+        index_file: Pfad zur Index-Datei
+        map_file: Pfad zur Mapping-Datei
+        dim: Embedding-Dimension
+        index: FAISS-Index
+        id_map: Mapping von FAISS-IDs zu Document-IDs
     """
 
-    def __init__(self, dim: int | None = None) -> None:
+    def __init__(self, dim: int | None = None, provider: EmbeddingProvider = "ollama") -> None:
+        """Initialisiert den FAISS-Store.
+
+        Args:
+            dim: Embedding-Dimension (optional)
+            provider: "ollama" oder "huggingface"
+        """
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+        self.provider = provider
         self.dim = dim
         self.index = None
         self.id_map: dict[str, str] = {}
-        if MAP_FILE.exists() and INDEX_FILE.exists():
+
+        # Hole provider-spezifische Dateipfade
+        self.index_file, self.map_file, _ = get_index_files(provider)
+
+        # Versuche Index zu laden
+        if self.map_file.exists() and self.index_file.exists():
             try:
-                self.id_map = json.loads(MAP_FILE.read_text(encoding="utf-8"))
-                self.index = faiss.read_index(str(INDEX_FILE))
+                self.id_map = json.loads(self.map_file.read_text(encoding="utf-8"))
+                self.index = faiss.read_index(str(self.index_file))
                 self.dim = self.index.d
             except Exception:
                 self.index = None
                 self.id_map = {}
 
     def _init_index(self, dim: int) -> None:
+        """Initialisiert einen neuen FAISS-Index.
+
+        Args:
+            dim: Embedding-Dimension
+        """
         self.dim = dim
         # Verwende Inner Product (cosine-normalisierte Vektoren)
         self.index = faiss.IndexFlatIP(dim)
 
     def clear(self) -> None:
+        """Löscht den Index und alle Mappings."""
         self.index = None
         self.id_map = {}
-        if INDEX_FILE.exists():
-            INDEX_FILE.unlink()
-        if MAP_FILE.exists():
-            MAP_FILE.unlink()
+        if self.index_file.exists():
+            self.index_file.unlink()
+        if self.map_file.exists():
+            self.map_file.unlink()
 
     def add(self, vector: List[float], doc_id: str, persist_now: bool = True) -> None:
+        """Fügt einen Embedding-Vektor zum Index hinzu.
+
+        Args:
+            vector: Embedding-Vektor als Liste von Floats
+            doc_id: Eindeutige Document-ID
+            persist_now: Wenn True, wird sofort persistiert
+
+        Raises:
+            ValueError: Wenn Vektor leer ist
+        """
         if not vector or len(vector) == 0:
             raise ValueError(f"Leerer Embedding-Vektor für doc_id={doc_id}")
 
@@ -75,7 +112,7 @@ class FaissStore:
                 sortiert nach absteigendem Score. Leere Liste wenn Index leer ist.
 
         Example:
-            >>> store = FaissStore()
+            >>> store = FaissStore(provider="ollama")
             >>> store.add([0.1] * 768, doc_id="doc_1")
             >>> results = store.search([0.1] * 768, k=5)
             >>> results[0]
@@ -102,7 +139,23 @@ class FaissStore:
         return results
 
     def persist(self) -> None:
+        """Persistiert Index und Mapping auf Disk."""
         if self.index is not None:
-            faiss.write_index(self.index, str(INDEX_FILE))
-        with open(MAP_FILE, "w", encoding="utf-8") as f:
+            faiss.write_index(self.index, str(self.index_file))
+        with open(self.map_file, "w", encoding="utf-8") as f:
             json.dump(self.id_map, f, ensure_ascii=False, indent=2)
+
+    def get_info(self) -> dict:
+        """Gibt Informationen über den Index zurück.
+
+        Returns:
+            dict: Dictionary mit Index-Informationen
+        """
+        return {
+            "provider": self.provider,
+            "index_file": str(self.index_file),
+            "map_file": str(self.map_file),
+            "dimension": self.dim,
+            "total_vectors": self.index.ntotal if self.index else 0,
+            "exists": self.index_file.exists(),
+        }

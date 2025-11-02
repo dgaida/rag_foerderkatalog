@@ -98,6 +98,73 @@ Lege den Förderkatalog in `input/foerderkatalog_export.csv`.
 
 ---
 
+## 🤗 Embedding-Provider
+
+Das Projekt unterstützt zwei Embedding-Provider, die parallel genutzt werden können:
+
+### 1. Ollama (Default)
+
+```bash
+# Standard-Installation wie bisher
+python main.py --batch-size 5000
+```
+
+- **Modell:** nomic-embed-text (768 Dimensionen)
+- **Index:** `data/vector.index`
+- **Vorteil:** Keine zusätzlichen Python-Dependencies
+
+### 2. HuggingFace (Neu) 🆕
+
+```bash
+# HuggingFace-Support installieren
+pip install -r requirements_huggingface.txt
+
+# Mit HuggingFace-Embeddings indizieren
+python main.py --provider huggingface --batch-size 5000
+```
+
+- **Standard-Modell:** sentence-transformers/all-mpnet-base-v2 (768 Dimensionen)
+- **Index:** `data/vector_hf.index`
+- **Vorteil:** Mehr Modellauswahl, kein Ollama nötig
+
+#### Verfügbare HuggingFace-Modelle
+
+| Modell | Dimension | Geschwindigkeit | Qualität |
+|--------|-----------|-----------------|----------|
+| `intfloat/e5-small-v2` | 384 | ⚡⚡⚡ | ⭐⭐⭐ |
+| `sentence-transformers/all-MiniLM-L6-v2` | 384 | ⚡⚡⚡ | ⭐⭐⭐ |
+| `intfloat/e5-base-v2` | 768 | ⚡⚡ | ⭐⭐⭐⭐ |
+| `sentence-transformers/all-mpnet-base-v2` | 768 | ⚡⚡ | ⭐⭐⭐⭐⭐ |
+
+```bash
+# Spezifisches Modell verwenden
+python main.py \
+  --provider huggingface \
+  --embed-model "sentence-transformers/all-mpnet-base-v2" \
+  --batch-size 5000
+```
+
+### Provider wechseln
+
+```bash
+# Mit Ollama suchen
+python main.py --provider ollama --no-embeddings
+
+# Mit HuggingFace suchen
+python main.py --provider huggingface --no-embeddings
+```
+
+### Index-Übersicht anzeigen
+
+```bash
+# Zeigt Info zu allen verfügbaren Indizes
+python main.py --index-info
+```
+
+**Detaillierte Dokumentation:** Siehe [README_HUGGINGFACE.md](docs/README_HUGGINGFACE.md)
+
+---
+
 ## ▶️ Nutzung
 
 ### Start des Systems (mit Embedding-Erstellung)

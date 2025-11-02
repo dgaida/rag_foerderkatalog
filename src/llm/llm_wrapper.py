@@ -2,12 +2,12 @@
 """LLM-Wrapper für Embeddings und Chat-Completion.
 
 Dieses Modul stellt Funktionen für die Interaktion mit LLMs bereit:
-- Embedding-Erzeugung via Ollama
+- Embedding-Erzeugung via Ollama oder HuggingFace
 - Chat-Completion via LLMClient
 - Prompt-Persistierung für Debugging
 """
 
-from typing import List, Optional
+from typing import List, Optional, Literal
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -15,6 +15,45 @@ from llm_client import LLMClient
 from ollama import embed as ollama_embed
 
 logger = logging.getLogger(__name__)
+
+# Lazy-Import für HuggingFace (nur wenn benötigt)
+_hf_embed_model = None
+_current_hf_model_name = None
+
+
+def _get_hf_embedding_model(model_name: str):
+    """Lazy-Loading für HuggingFace Embedding-Modell.
+
+    Args:
+        model_name: Name des HuggingFace-Modells
+
+    Returns:
+        HuggingFaceEmbedding-Instanz
+    """
+    global _hf_embed_model, _current_hf_model_name
+
+    # Wenn bereits geladen und gleiches Modell, wiederverwenden
+    if _hf_embed_model is not None and _current_hf_model_name == model_name:
+        return _hf_embed_model
+
+    try:
+        from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+        logger.info("Lade HuggingFace Embedding-Modell: %s", model_name)
+        _hf_embed_model = HuggingFaceEmbedding(model_name=model_name)
+        _current_hf_model_name = model_name
+        logger.info("HuggingFace Modell erfolgreich geladen")
+
+        return _hf_embed_model
+    except ImportError as e:
+        logger.error(
+            "llama-index-embeddings-huggingface nicht installiert. "
+            "Installieren Sie mit: pip install llama-index-embeddings-huggingface"
+        )
+        raise ImportError(
+            "HuggingFace Embeddings benötigen llama-index-embeddings-huggingface. "
+            "Installieren Sie mit: pip install llama-index-embeddings-huggingface"
+        ) from e
 
 
 def save_prompt_to_md(prompt: str, folder: str = "logs/prompts") -> Path:
@@ -79,25 +118,52 @@ def chat_system_query(system_prompt: str, user_prompt: str, model: Optional[str]
         raise
 
 
-def embed_text(text: str, model: str = "nomic-embed-text") -> List[float]:
-    """Erstellt ein Embedding mittels Ollama, robust gegen verschiedene API-Rückgabeformate.
+def embed_text(text: str, provider: Literal["ollama", "huggingface"] = "ollama", model: Optional[str] = None) -> List[float]:
+    """Erstellt ein Embedding mittels Ollama oder HuggingFace.
 
     Args:
         text: Der zu embeddierende Text.
-        model: Name des Ollama-Embedding-Modells. Defaults to "nomic-embed-text".
+        provider: "ollama" oder "huggingface". Defaults to "ollama".
+        model: Modellname. Wenn None, wird Default verwendet.
+            - Ollama: "nomic-embed-text"
+            - HuggingFace: "intfloat/e5-small-v2"
 
     Returns:
         List[float]: Normalisierter Embedding-Vektor als Liste von Floats.
 
     Raises:
-        TypeError: Wenn der Rückgabewert von Ollama ein unerwartetes Format hat.
-        ValueError: Wenn der Embedding-Vektor ungültig ist.
+        ValueError: Wenn der Embedding-Vektor ungültig ist oder Provider unbekannt.
+        ImportError: Wenn HuggingFace-Dependencies fehlen.
         Exception: Bei sonstigen Fehlern während der Embedding-Erzeugung.
 
     Example:
-        >>> vec = embed_text("Künstliche Intelligenz Forschung")
-        >>> len(vec)
+        >>> # Ollama
+        >>> vec_ollama = embed_text("KI Forschung", provider="ollama")
+        >>> len(vec_ollama)
         768
+
+        >>> # HuggingFace
+        >>> vec_hf = embed_text("KI Forschung", provider="huggingface")
+        >>> len(vec_hf)
+        384
+    """
+    if provider == "ollama":
+        return _embed_text_ollama(text, model or "nomic-embed-text")
+    elif provider == "huggingface":
+        return _embed_text_huggingface(text, model or "intfloat/e5-small-v2")
+    else:
+        raise ValueError(f"Unbekannter Provider: {provider}. Verwenden Sie 'ollama' oder 'huggingface'.")
+
+
+def _embed_text_ollama(text: str, model: str) -> List[float]:
+    """Erstellt Embedding via Ollama.
+
+    Args:
+        text: Zu embeddierender Text.
+        model: Ollama-Modellname.
+
+    Returns:
+        List[float]: Embedding-Vektor.
     """
     try:
         resp = ollama_embed(model=model, input=text)
@@ -124,6 +190,54 @@ def embed_text(text: str, model: str = "nomic-embed-text") -> List[float]:
     except Exception as e:
         logger.exception("Fehler bei Ollama embed: %s", e)
         raise
+
+
+def _embed_text_huggingface(text: str, model_name: str) -> List[float]:
+    """Erstellt Embedding via HuggingFace.
+
+    Args:
+        text: Zu embeddierender Text.
+        model_name: HuggingFace-Modellname.
+
+    Returns:
+        List[float]: Embedding-Vektor.
+    """
+    try:
+        embed_model = _get_hf_embedding_model(model_name)
+
+        # LlamaIndex HuggingFaceEmbedding hat get_text_embedding() Methode
+        embedding = embed_model.get_text_embedding(text)
+
+        # Validierung
+        if not isinstance(embedding, list) or not all(isinstance(x, (float, int)) for x in embedding):
+            raise ValueError(f"HuggingFace Embedding hat unerwartetes Format: {type(embedding)}")
+
+        return [float(x) for x in embedding]
+
+    except Exception as e:
+        logger.exception("Fehler bei HuggingFace embed: %s", e)
+        raise
+
+
+def get_embedding_dimension(provider: Literal["ollama", "huggingface"], model: Optional[str] = None) -> int:
+    """Ermittelt die Embedding-Dimension für ein Modell.
+
+    Args:
+        provider: "ollama" oder "huggingface"
+        model: Modellname (optional, verwendet Default wenn None)
+
+    Returns:
+        int: Dimension des Embedding-Vektors
+
+    Example:
+        >>> get_embedding_dimension("ollama", "nomic-embed-text")
+        768
+        >>> get_embedding_dimension("huggingface", "intfloat/e5-small-v2")
+        384
+    """
+    # Erstelle Test-Embedding und messe Dimension
+    test_vec = embed_text("test", provider=provider, model=model)
+    return len(test_vec)
 
 
 def get_improved_system_prompt() -> str:

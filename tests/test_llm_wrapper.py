@@ -131,7 +131,8 @@ class TestChatSystemQuery:
         result = chat_system_query("You are helpful", "What is AI?", model="test-model")
 
         assert result == "Test response"
-        mock_client_class.assert_called_once_with(llm="test-model")
+        # FIX: Berücksichtige alle Parameter, die tatsächlich übergeben werden
+        mock_client_class.assert_called_once_with(llm="test-model", max_tokens=1024, temperature=0.5)
         mock_save.assert_called_once()
 
     @patch("src.llm.llm_wrapper.LLMClient")
@@ -144,7 +145,8 @@ class TestChatSystemQuery:
 
         chat_system_query("System", "User", model=None)
 
-        mock_client_class.assert_called_once_with(llm=None)
+        # FIX: Berücksichtige alle Parameter
+        mock_client_class.assert_called_once_with(llm=None, max_tokens=1024, temperature=0.5)
 
     @patch("src.llm.llm_wrapper.LLMClient")
     @patch("src.llm.llm_wrapper.save_prompt_to_md")

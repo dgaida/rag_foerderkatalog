@@ -2,7 +2,7 @@
 
 Dieses Modul implementiert die Kernfunktionalität für die Suche in Förderprojekten:
 - CSV-Import und Datenbereinigung
-- Embedding-Erzeugung mit Laufzeit-Extraktion
+- Embedding-Erzeugung mit Ollama oder HuggingFace
 - Semantische Suche via FAISS
 - Kontextbasierte LLM-Antworten
 """
@@ -16,8 +16,18 @@ import re
 
 from ..utils.logging_config import get_logger
 from ..embeddings.faiss_store import FaissStore
-from ..llm.llm_wrapper import embed_text, chat_system_query, get_improved_system_prompt, build_improved_user_prompt
-from ..config import INPUT_CSV, TOP_K_DEFAULT, MAX_DOCS_FOR_LLM
+from ..llm.llm_wrapper import (
+    embed_text,
+    chat_system_query,
+    get_improved_system_prompt,
+    build_improved_user_prompt,
+)
+from ..config import (
+    INPUT_CSV,
+    TOP_K_DEFAULT,
+    MAX_DOCS_FOR_LLM,
+    EmbeddingProvider,
+)
 
 logger = get_logger(__name__)
 
@@ -27,30 +37,49 @@ class ProjectSearchEngine:
 
     Diese Klasse verwaltet den gesamten Suchprozess:
     - Laden und Bereinigen der CSV-Daten
-    - Erzeugung und Verwaltung von Embeddings
+    - Erzeugung und Verwaltung von Embeddings (Ollama oder HuggingFace)
     - Semantische Suche via FAISS
     - Kontextbasierte Antwortgenerierung
 
     Attributes:
         csv_file: Pfad zur CSV-Datei mit Förderprojekten.
         df: Pandas DataFrame mit den geladenen Projektdaten.
+        provider: Embedding-Provider ("ollama" oder "huggingface")
+        embed_model: Name des Embedding-Modells
         faiss: FaissStore-Instanz für Vektorsuche.
 
     Example:
+        >>> # Mit Ollama (Default)
         >>> engine = ProjectSearchEngine()
+        >>> engine.load_and_clean()
+        >>> results = engine.search("Künstliche Intelligenz", k=10)
+
+        >>> # Mit HuggingFace
+        >>> engine = ProjectSearchEngine(
+        ...     provider="huggingface",
+        ...     embed_model="intfloat/e5-small-v2"
+        ... )
         >>> engine.load_and_clean()
         >>> results = engine.search("Künstliche Intelligenz", k=10)
     """
 
-    def __init__(self, csv_file: Optional[Path] = None):
+    def __init__(
+        self, csv_file: Optional[Path] = None, provider: EmbeddingProvider = "ollama", embed_model: Optional[str] = None
+    ):
         """Initialisiert die Search Engine.
 
         Args:
             csv_file: Optionaler Pfad zur CSV-Datei. Wenn None, wird INPUT_CSV verwendet.
+            provider: Embedding-Provider ("ollama" oder "huggingface")
+            embed_model: Name des Embedding-Modells. Wenn None, wird Default verwendet.
         """
         self.csv_file = Path(csv_file) if csv_file else INPUT_CSV
         self.df: Optional[pd.DataFrame] = None
-        self.faiss = FaissStore()
+        self.provider = provider
+        self.embed_model = embed_model
+        self.faiss = FaissStore(provider=provider)
+
+        logger.info("SearchEngine initialisiert mit Provider: %s, Modell: %s", provider, embed_model or "default")
 
     def _extract_year(self, date_str: str) -> Optional[int]:
         """Extrahiert die Jahreszahl aus einem Datumsstring.
@@ -189,10 +218,14 @@ class ProjectSearchEngine:
             raise RuntimeError("Dataframe nicht geladen. Rufe load_and_clean() auf.")
 
         if self.faiss.index is not None and self.faiss.index.ntotal > 0:
-            logger.info("FAISS enthält bereits %d Vektoren, überspringe Embedding-Erstellung.", self.faiss.index.ntotal)
+            logger.info(
+                "FAISS (%s) enthält bereits %d Vektoren, überspringe Embedding-Erstellung.",
+                self.provider,
+                self.faiss.index.ntotal,
+            )
             return
 
-        logger.info("Erzeuge Embeddings für %d Dokumente (kann lange dauern)...", len(self.df))
+        logger.info("Erzeuge Embeddings für %d Dokumente mit %s (kann lange dauern)...", len(self.df), self.provider)
 
         for idx, row in self.df.iterrows():
             text = self._build_embedding_text(row)
@@ -202,7 +235,7 @@ class ProjectSearchEngine:
                 continue
 
             try:
-                vec = embed_text(text)
+                vec = embed_text(text, provider=self.provider, model=self.embed_model)
                 self.faiss.add(vec, doc_id=str(idx), persist_now=False)
 
                 if (idx + 1) % 100 == 0:
@@ -212,7 +245,7 @@ class ProjectSearchEngine:
                 logger.exception("Embedding fehlgeschlagen für Zeile %s: %s", idx, e)
 
         self.faiss.persist()
-        logger.info("Embeddings persistiert.")
+        logger.info("Embeddings persistiert (%s).", self.provider)
 
     def search(self, query: str, k: int = TOP_K_DEFAULT) -> pd.DataFrame:
         """Führt eine semantische Suche durch.
@@ -232,7 +265,7 @@ class ProjectSearchEngine:
             raise RuntimeError("Dataframe nicht geladen.")
 
         try:
-            qvec = embed_text(query)
+            qvec = embed_text(query, provider=self.provider, model=self.embed_model)
 
             if self.faiss.index is None:
                 logger.error("FAISS Index ist leer oder nicht initialisiert.")
@@ -257,7 +290,7 @@ class ProjectSearchEngine:
             results["__score"] = scores
             results = results.sort_values("__score", ascending=False)
 
-            logger.info("Semantische Suche nach '%s' lieferte %d Treffer", query, len(results))
+            logger.info("Semantische Suche (%s) nach '%s' lieferte %d Treffer", self.provider, query, len(results))
             return results
 
         except Exception as e:
@@ -306,3 +339,14 @@ class ProjectSearchEngine:
 
         answer = chat_system_query(system_prompt, user_prompt)
         return answer
+
+    def get_index_info(self) -> dict:
+        """Gibt Informationen über den aktuellen Index zurück.
+
+        Returns:
+            dict: Dictionary mit Index-Informationen
+        """
+        info = self.faiss.get_info()
+        info["csv_loaded"] = self.df is not None
+        info["csv_rows"] = len(self.df) if self.df is not None else 0
+        return info
