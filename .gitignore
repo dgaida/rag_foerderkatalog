@@ -210,3 +210,27 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ===== PROJECT SPECIFIC =====
+
+# Data files (large binary files, should not be in git)
+data/vector.index
+data/embeddings_map.json
+data/indexing_progress.json
+data/*.npy
+data/*.pkl
+
+# Input CSV (too large for git)
+input/foerderkatalog_export.csv
+input/*.csv
+
+# Release artifacts (upload to GitHub Releases instead)
+releases/
+releases/*.zip
+releases/*.tar.gz
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
