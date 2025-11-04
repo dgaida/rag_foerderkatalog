@@ -5,7 +5,7 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 
 ---
 
-![CI/CD Pipeline](https://github.com/dgaida/rag_foerderkatalog/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/dgaida/rag_foerderkatalog/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/ci.yml)
 [![Test Suite](https://github.com/dgaida/rag_foerderkatalog/workflows/Test%20Suite/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/master/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)

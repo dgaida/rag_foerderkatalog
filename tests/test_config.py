@@ -4,6 +4,7 @@ Tests für:
 - Pfad-Konfigurationen
 - Default-Werte
 - Konstanten
+- Provider-spezifische Index-Dateien
 """
 
 import pytest
@@ -13,13 +14,17 @@ from src.config import (
     INPUT_CSV,
     DATA_DIR,
     EMBEDDINGS_FILE,
-    FAISS_INDEX_FILE,
-    EMBED_MAP_FILE,
+    FAISS_INDEX_FILE_OLLAMA,
+    FAISS_INDEX_FILE_HF,
+    EMBED_MAP_FILE_OLLAMA,
+    EMBED_MAP_FILE_HF,
     LOG_DIR,
     OLLAMA_EMBED_MODEL,
+    HF_EMBED_MODEL_DEFAULT,
     LLM_DEFAULT_MODEL,
     TOP_K_DEFAULT,
     MAX_DOCS_FOR_LLM,
+    get_index_files,
 )
 
 
@@ -50,15 +55,21 @@ class TestPathConfiguration:
         assert EMBEDDINGS_FILE.parent == DATA_DIR
         assert EMBEDDINGS_FILE.suffix == ".npy"
 
-    def test_faiss_index_file_location(self):
-        """Test: FAISS_INDEX_FILE ist in DATA_DIR."""
-        assert FAISS_INDEX_FILE.parent == DATA_DIR
-        assert FAISS_INDEX_FILE.name == "vector.index"
+    def test_faiss_index_files_location(self):
+        """Test: FAISS Index-Dateien sind in DATA_DIR."""
+        assert FAISS_INDEX_FILE_OLLAMA.parent == DATA_DIR
+        assert FAISS_INDEX_FILE_OLLAMA.name == "vector.index"
 
-    def test_embed_map_file_location(self):
-        """Test: EMBED_MAP_FILE ist in DATA_DIR."""
-        assert EMBED_MAP_FILE.parent == DATA_DIR
-        assert EMBED_MAP_FILE.suffix == ".json"
+        assert FAISS_INDEX_FILE_HF.parent == DATA_DIR
+        assert FAISS_INDEX_FILE_HF.name == "vector_hf.index"
+
+    def test_embed_map_files_location(self):
+        """Test: Embedding-Map-Dateien sind in DATA_DIR."""
+        assert EMBED_MAP_FILE_OLLAMA.parent == DATA_DIR
+        assert EMBED_MAP_FILE_OLLAMA.suffix == ".json"
+
+        assert EMBED_MAP_FILE_HF.parent == DATA_DIR
+        assert EMBED_MAP_FILE_HF.suffix == ".json"
 
 
 class TestModelConfiguration:
@@ -68,6 +79,11 @@ class TestModelConfiguration:
         """Test: OLLAMA_EMBED_MODEL ist ein String."""
         assert isinstance(OLLAMA_EMBED_MODEL, str)
         assert len(OLLAMA_EMBED_MODEL) > 0
+
+    def test_hf_embed_model_is_string(self):
+        """Test: HF_EMBED_MODEL_DEFAULT ist ein String."""
+        assert isinstance(HF_EMBED_MODEL_DEFAULT, str)
+        assert len(HF_EMBED_MODEL_DEFAULT) > 0
 
     def test_llm_default_model_is_string(self):
         """Test: LLM_DEFAULT_MODEL ist ein String."""
@@ -100,20 +116,23 @@ class TestLimitConfiguration:
         """Test: MAX_DOCS_FOR_LLM hat einen sinnvollen Wert."""
         assert 1 <= MAX_DOCS_FOR_LLM <= 100
 
-    def test_max_docs_smaller_than_top_k(self):
-        """Test: MAX_DOCS_FOR_LLM sollte <= TOP_K_DEFAULT sein."""
-        # Dies ist eine Empfehlung, kein hartes Requirement
-        # MAX_DOCS kann größer sein, sollte aber beachtet werden
-        if MAX_DOCS_FOR_LLM > TOP_K_DEFAULT:
-            pytest.warns(UserWarning)
-
 
 class TestPathTypes:
     """Tests für Pfad-Typen."""
 
     def test_all_paths_are_path_objects(self):
         """Test: Alle Pfad-Konstanten sind Path-Objekte."""
-        paths = [ROOT, INPUT_CSV, DATA_DIR, EMBEDDINGS_FILE, FAISS_INDEX_FILE, EMBED_MAP_FILE, LOG_DIR]
+        paths = [
+            ROOT,
+            INPUT_CSV,
+            DATA_DIR,
+            EMBEDDINGS_FILE,
+            FAISS_INDEX_FILE_OLLAMA,
+            FAISS_INDEX_FILE_HF,
+            EMBED_MAP_FILE_OLLAMA,
+            EMBED_MAP_FILE_HF,
+            LOG_DIR,
+        ]
 
         for path in paths:
             assert isinstance(path, Path), f"{path} ist kein Path-Objekt"
@@ -123,13 +142,77 @@ class TestPathTypes:
         assert ROOT.is_absolute()
 
 
+class TestGetIndexFiles:
+    """Tests für die get_index_files() Funktion."""
+
+    def test_get_index_files_ollama(self):
+        """Test: Ollama Index-Dateien werden korrekt zurückgegeben."""
+        index_file, map_file, progress_file = get_index_files("ollama")
+
+        assert index_file == FAISS_INDEX_FILE_OLLAMA
+        assert map_file == EMBED_MAP_FILE_OLLAMA
+        assert index_file.name == "vector.index"
+
+    def test_get_index_files_huggingface(self):
+        """Test: HuggingFace Index-Dateien werden korrekt zurückgegeben."""
+        index_file, map_file, progress_file = get_index_files("huggingface")
+
+        assert index_file == FAISS_INDEX_FILE_HF
+        assert map_file == EMBED_MAP_FILE_HF
+        assert index_file.name == "vector_hf.index"
+
+    def test_get_index_files_invalid_provider(self):
+        """Test: ValueError bei unbekanntem Provider."""
+        with pytest.raises(ValueError, match="Unbekannter Provider"):
+            get_index_files("invalid_provider")
+
+    def test_get_index_files_returns_tuple(self):
+        """Test: Funktion gibt Tuple mit 3 Elementen zurück."""
+        result = get_index_files("ollama")
+
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+
+    def test_get_index_files_all_paths(self):
+        """Test: Alle zurückgegebenen Werte sind Path-Objekte."""
+        index_file, map_file, progress_file = get_index_files("ollama")
+
+        assert isinstance(index_file, Path)
+        assert isinstance(map_file, Path)
+        assert isinstance(progress_file, Path)
+
+
+class TestProviderSpecificFiles:
+    """Tests für provider-spezifische Datei-Unterschiede."""
+
+    def test_ollama_and_hf_have_different_files(self):
+        """Test: Ollama und HuggingFace haben unterschiedliche Dateien."""
+        ollama_index, _, _ = get_index_files("ollama")
+        hf_index, _, _ = get_index_files("huggingface")
+
+        assert ollama_index != hf_index
+        assert ollama_index.name != hf_index.name
+
+    def test_ollama_files_naming_convention(self):
+        """Test: Ollama-Dateien folgen Namenskonvention."""
+        index_file, map_file, progress_file = get_index_files("ollama")
+
+        assert "hf" not in index_file.name
+        assert "hf" not in map_file.name
+
+    def test_hf_files_naming_convention(self):
+        """Test: HuggingFace-Dateien folgen Namenskonvention."""
+        index_file, map_file, progress_file = get_index_files("huggingface")
+
+        assert "hf" in index_file.name
+        assert "hf" in map_file.name
+
+
 class TestConfigImmutability:
     """Tests für Config-Unveränderlichkeit."""
 
     def test_constants_are_final(self):
         """Test: Wichtige Konstanten sind als Final markiert (Typ-Check)."""
-        # Diese Tests prüfen zur Laufzeit, ob Typing.Final verwendet wurde
-        # In der Praxis wird dies durch mypy/type-checker verifiziert
         from typing import get_type_hints
         import src.config as config_module
 
