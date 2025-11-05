@@ -14,59 +14,66 @@ from src.utils.index_validator import IndexValidator, check_index_completeness, 
 from src.embeddings.faiss_store import FaissStore
 
 
-class TestIndexValidator:
-    """Tests für die IndexValidator-Klasse."""
-
-    @pytest.fixture
-    def sample_df(self):
-        """Erstellt einen Test-DataFrame."""
-        return pd.DataFrame(
-            {
-                '="FKZ"': ["ABC001", "ABC002", "ABC003", "ABC004", "ABC005"],
-                '="Zuwendungsempfänger"': ["Uni A", "Uni B", "Uni C", "Uni D", "Uni E"],
-                '="Thema"': ["KI", "Robotik", "Energie", "Medizin", "Klima"],
-            }
-        )
-
-    @pytest.fixture
-    def mock_faiss_empty(self):
-        """Erstellt einen leeren Mock-FAISS-Store."""
-        mock = MagicMock(spec=FaissStore)
-        mock.index = None
-        mock.id_map = {}
-        return mock
-
-    @pytest.fixture
-    def mock_faiss_partial(self):
-        """Erstellt einen teilweise gefüllten Mock-FAISS-Store."""
-        mock = MagicMock(spec=FaissStore)
-        mock.index = MagicMock()
-        mock.index.ntotal = 3
-        # Nur IDs 0, 1, 2 sind indiziert
-        mock.id_map = {"0": "0", "1": "1", "2": "2"}
-        return mock
-
-    @pytest.fixture
-    def mock_faiss_complete(self):
-        """Erstellt einen vollständig gefüllten Mock-FAISS-Store."""
-        mock = MagicMock(spec=FaissStore)
-        mock.index = MagicMock()
-        mock.index.ntotal = 5
-        mock.id_map = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4"}
-        return mock
-
-    @pytest.fixture
-    def mock_faiss_with_orphans(self):
-        """Erstellt einen Mock-FAISS-Store mit verwaisten Einträgen."""
-        mock = MagicMock(spec=FaissStore)
-        mock.index = MagicMock()
-        mock.index.ntotal = 6
-        # IDs 5 und 6 existieren nicht im DataFrame
-        mock.id_map = {"0": "0", "1": "1", "2": "2", "3": "5", "4": "6"}  # Verwaist  # Verwaist
-        return mock
+# ===== Fixtures auf Modul-Ebene (verfügbar für alle Testklassen) =====
 
 
-class TestGetIndexedIds(TestIndexValidator):
+@pytest.fixture
+def sample_df():
+    """Erstellt einen Test-DataFrame."""
+    return pd.DataFrame(
+        {
+            '="FKZ"': ["ABC001", "ABC002", "ABC003", "ABC004", "ABC005"],
+            '="Zuwendungsempfänger"': ["Uni A", "Uni B", "Uni C", "Uni D", "Uni E"],
+            '="Thema"': ["KI", "Robotik", "Energie", "Medizin", "Klima"],
+        }
+    )
+
+
+@pytest.fixture
+def mock_faiss_empty():
+    """Erstellt einen leeren Mock-FAISS-Store."""
+    mock = MagicMock(spec=FaissStore)
+    mock.index = None
+    mock.id_map = {}
+    return mock
+
+
+@pytest.fixture
+def mock_faiss_partial():
+    """Erstellt einen teilweise gefüllten Mock-FAISS-Store."""
+    mock = MagicMock(spec=FaissStore)
+    mock.index = MagicMock()
+    mock.index.ntotal = 3
+    # Nur IDs 0, 1, 2 sind indiziert
+    mock.id_map = {"0": "0", "1": "1", "2": "2"}
+    return mock
+
+
+@pytest.fixture
+def mock_faiss_complete():
+    """Erstellt einen vollständig gefüllten Mock-FAISS-Store."""
+    mock = MagicMock(spec=FaissStore)
+    mock.index = MagicMock()
+    mock.index.ntotal = 5
+    mock.id_map = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4"}
+    return mock
+
+
+@pytest.fixture
+def mock_faiss_with_orphans():
+    """Erstellt einen Mock-FAISS-Store mit verwaisten Einträgen."""
+    mock = MagicMock(spec=FaissStore)
+    mock.index = MagicMock()
+    mock.index.ntotal = 6
+    # IDs 5 und 6 existieren nicht im DataFrame
+    mock.id_map = {"0": "0", "1": "1", "2": "2", "3": "5", "4": "6"}  # Verwaist  # Verwaist
+    return mock
+
+
+# ===== Test-Klassen =====
+
+
+class TestGetIndexedIds:
     """Tests für get_indexed_ids()."""
 
     def test_get_indexed_ids_empty_index(self, mock_faiss_empty, sample_df):
@@ -102,7 +109,7 @@ class TestGetIndexedIds(TestIndexValidator):
         assert result == {0, 2}
 
 
-class TestGetCsvIds(TestIndexValidator):
+class TestGetCsvIds:
     """Tests für get_csv_ids()."""
 
     def test_get_csv_ids_normal_dataframe(self, mock_faiss_empty, sample_df):
@@ -129,7 +136,7 @@ class TestGetCsvIds(TestIndexValidator):
         assert result == {10, 20, 30}
 
 
-class TestGetMissingIndices(TestIndexValidator):
+class TestGetMissingIndices:
     """Tests für get_missing_indices()."""
 
     def test_get_missing_indices_empty_index(self, mock_faiss_empty, sample_df):
@@ -161,7 +168,7 @@ class TestGetMissingIndices(TestIndexValidator):
         assert result == sorted(result)
 
 
-class TestGetOrphanedIndices(TestIndexValidator):
+class TestGetOrphanedIndices:
     """Tests für get_orphaned_indices()."""
 
     def test_get_orphaned_indices_no_orphans(self, mock_faiss_complete, sample_df):
@@ -187,7 +194,7 @@ class TestGetOrphanedIndices(TestIndexValidator):
         assert result == [0, 1, 2, 3, 4]
 
 
-class TestValidateIndex(TestIndexValidator):
+class TestValidateIndex:
     """Tests für validate_index()."""
 
     def test_validate_index_empty(self, mock_faiss_empty, sample_df):
@@ -235,7 +242,7 @@ class TestValidateIndex(TestIndexValidator):
         assert len(stats["orphaned_ids"]) > 0
 
 
-class TestGetMissingProjects(TestIndexValidator):
+class TestGetMissingProjects:
     """Tests für get_missing_projects()."""
 
     def test_get_missing_projects_no_missing(self, mock_faiss_complete, sample_df):
