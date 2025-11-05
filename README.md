@@ -1,6 +1,6 @@
 # 🧠 RAG Förderkatalog — Semantische & Hybride Suche in Forschungsförderprojekten
 
-Eine **Retrieval-Augmented Generation (RAG)** Anwendung zur semantischen und keyword-basierten Suche in deutschen Förderprojekten.
+Eine **Retrieval-Augmented Generation (RAG)** Anwendung zur semantischen und keyword-basierten Suche im [Förderkatalog des Bundes](https://foerderportal.bund.de/foekat/jsp/SucheAction.do?actionMode=searchmask).
 Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Gradio** für die Oberfläche und **GROQ / LLMClient** für Antworten aus Kontextdaten.
 
 ---
@@ -352,6 +352,8 @@ Dieses Projekt entstand inspiriert durch:
 - ➡️ [ibaleri/Foerderprojekt](https://github.com/ibaleri/Foerderprojekt)
 
 Das Projekt hat wertvolle Ideen und Schnittstellen geliefert, auf denen diese Anwendung aufbaut.
+
+- [Förderkatalog des Bundes](https://foerderportal.bund.de/foekat/jsp/SucheAction.do?actionMode=searchmask)
 
 ---
 

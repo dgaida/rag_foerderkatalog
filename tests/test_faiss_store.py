@@ -6,6 +6,11 @@ Tests für:
 - Suche nach ähnlichen Vektoren
 - Persistierung und Laden
 - Provider-spezifische Funktionalität
+
+FIXES:
+1. Temporäre Verzeichnisse werden korrekt verwendet
+2. Mock-Dateien werden nicht aus echten Verzeichnissen geladen
+3. HuggingFace-Modell-Downloads werden gemockt
 """
 
 import pytest
@@ -16,30 +21,34 @@ from unittest.mock import patch
 from src.embeddings.faiss_store import FaissStore
 
 
-@pytest.fixture(autouse=True)
-def reset_faiss_store():
-    """Reset global state zwischen Tests."""
-    yield
-    # Cleanup nach jedem Test
-
-
 class TestFaissStoreInitialization:
     """Tests für FaissStore-Initialisierung."""
 
     def test_init_creates_store(self):
         """Test: FaissStore kann initialisiert werden."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("src.embeddings.faiss_store.DATA_DIR", Path(tmpdir)):
+            index_file = Path(tmpdir) / "test_vector.index"
+            map_file = Path(tmpdir) / "test_map.json"
+            progress_file = Path(tmpdir) / "test_progress.json"
+
+            # FIX: Patch get_index_files um tmp-Pfade zu verwenden
+            with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
 
                 assert store.dim == 768
                 assert store.provider == "ollama"
+                # FIX: id_map ist leer wenn keine Dateien existieren
                 assert store.id_map == {}
+                assert store.index is None  # Index existiert nicht
 
     def test_init_with_dimension(self):
         """Test: Initialisierung mit spezifischer Dimension."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("src.embeddings.faiss_store.DATA_DIR", Path(tmpdir)):
+            index_file = Path(tmpdir) / "test_hf.index"
+            map_file = Path(tmpdir) / "test_hf.json"
+            progress_file = Path(tmpdir) / "test_hf_progress.json"
+
+            with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=384, provider="huggingface")
 
                 assert store.dim == 384
@@ -49,9 +58,9 @@ class TestFaissStoreInitialization:
         """Test: Existierender Index wird geladen."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Erstelle Mock-Index-Dateien
-            index_file = Path(tmpdir) / "vector.index"
-            map_file = Path(tmpdir) / "embeddings_map.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            index_file = Path(tmpdir) / "existing_vector.index"
+            map_file = Path(tmpdir) / "existing_map.json"
+            progress_file = Path(tmpdir) / "existing_progress.json"
 
             # Schreibe Test-Mapping
             test_map = {"0": "doc_0", "1": "doc_1"}
@@ -69,6 +78,7 @@ class TestFaissStoreInitialization:
 
                 assert store.index is not None
                 assert store.dim == 768
+                # FIX: Jetzt sollte id_map geladen werden
                 assert store.id_map == test_map
 
 
@@ -80,7 +90,7 @@ class TestAddVector:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "test_vector.index"
             map_file = Path(tmpdir) / "test_map.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "test_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
@@ -101,7 +111,7 @@ class TestAddVector:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "test_vector.index"
             map_file = Path(tmpdir) / "test_map.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "test_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=384, provider="huggingface")
@@ -120,7 +130,7 @@ class TestAddVector:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "test.index"
             map_file = Path(tmpdir) / "test.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "test_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
@@ -131,9 +141,9 @@ class TestAddVector:
     def test_add_vector_with_persist(self):
         """Test: Vektor mit sofortiger Persistierung."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            index_file = Path(tmpdir) / "vector.index"
-            map_file = Path(tmpdir) / "embeddings_map.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            index_file = Path(tmpdir) / "persist_vector.index"
+            map_file = Path(tmpdir) / "persist_map.json"
+            progress_file = Path(tmpdir) / "persist_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
@@ -143,9 +153,9 @@ class TestAddVector:
                 vector = [0.2] * 768
                 store.add(vector, doc_id="test_doc", persist_now=True)
 
-                # Prüfe dass Dateien erstellt wurden
-                assert index_file.exists()
-                assert map_file.exists()
+                # FIX: Prüfe dass Dateien im tmpdir erstellt wurden
+                assert index_file.exists(), f"Index-Datei wurde nicht erstellt: {index_file}"
+                assert map_file.exists(), f"Map-Datei wurde nicht erstellt: {map_file}"
 
 
 class TestSearch:
@@ -156,11 +166,11 @@ class TestSearch:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "empty.index"
             map_file = Path(tmpdir) / "empty.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "empty_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
-                store.index = None  # Explizit leerer Index
+                store.index = None
                 store.id_map = {}
 
                 vector = [0.5] * 768
@@ -173,7 +183,7 @@ class TestSearch:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "search.index"
             map_file = Path(tmpdir) / "search.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "search_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=128, provider="ollama")
@@ -205,7 +215,7 @@ class TestSearch:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "k_test.index"
             map_file = Path(tmpdir) / "k_test.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "k_test_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=64, provider="ollama")
@@ -281,7 +291,7 @@ class TestClear:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "clear.index"
             map_file = Path(tmpdir) / "clear.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "clear_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=128, provider="ollama")
@@ -305,7 +315,7 @@ class TestGetInfo:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "info.index"
             map_file = Path(tmpdir) / "info.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "info_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=768, provider="ollama")
@@ -319,7 +329,7 @@ class TestGetInfo:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "keys.index"
             map_file = Path(tmpdir) / "keys.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "keys_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=384, provider="huggingface")
@@ -342,7 +352,7 @@ class TestGetInfo:
         with tempfile.TemporaryDirectory() as tmpdir:
             index_file = Path(tmpdir) / "values.index"
             map_file = Path(tmpdir) / "values.json"
-            progress_file = Path(tmpdir) / "progress.json"
+            progress_file = Path(tmpdir) / "values_progress.json"
 
             with patch("src.config.get_index_files", return_value=(index_file, map_file, progress_file)):
                 store = FaissStore(dim=512, provider="ollama")
