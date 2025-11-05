@@ -1073,7 +1073,10 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
         title="🧠 RAG Förderkatalog — Intelligente Projektsuche",
         css=CUSTOM_CSS,
         theme=gr.themes.Default(
-            primary_hue="indigo", secondary_hue="cyan", neutral_hue="slate", font=("Inter", "system-ui", "sans-serif")
+            primary_hue="indigo",
+            secondary_hue="cyan",
+            neutral_hue="slate",
+            font=("Inter", "system-ui", "sans-serif"),
         ),
     ) as demo:
 
@@ -1120,11 +1123,19 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
         with gr.Row():
             with gr.Column(scale=2):
                 mode = gr.Radio(
-                    choices=["hybrid", "semantic", "keyword"], value="hybrid", label="⚙️ Suchmodus", elem_classes="radio-group"
+                    choices=["hybrid", "semantic", "keyword"],
+                    value="hybrid",
+                    label="⚙️ Suchmodus",
+                    elem_classes="radio-group",
                 )
             with gr.Column(scale=2):
                 k_slider = gr.Slider(
-                    minimum=5, maximum=100, value=20, step=5, label="📊 Anzahl Treffer (k)", elem_classes="slider-container"
+                    minimum=5,
+                    maximum=100,
+                    value=20,
+                    step=5,
+                    label="📊 Anzahl Treffer (k)",
+                    elem_classes="slider-container",
                 )
             with gr.Column(scale=1):
                 search_btn = gr.Button("🚀 Suchen", variant="primary", elem_classes="primary-button")
@@ -1134,7 +1145,11 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
         with gr.Tabs():
             with gr.Tab("📋 Suchergebnisse"):
                 result_table = gr.Dataframe(
-                    headers=None, interactive=False, label="Gefundene Projekte", wrap=True, elem_classes="dataframe"
+                    headers=None,
+                    interactive=False,
+                    label="Gefundene Projekte",
+                    wrap=True,
+                    elem_classes="dataframe",
                 )
 
                 with gr.Accordion("📈 Statistiken", open=False):

@@ -10,7 +10,11 @@ Tests für:
 import pytest
 import pandas as pd
 from unittest.mock import MagicMock
-from src.utils.index_validator import IndexValidator, check_index_completeness, get_new_projects_summary
+from src.utils.index_validator import (
+    IndexValidator,
+    check_index_completeness,
+    get_new_projects_summary,
+)
 from src.embeddings.faiss_store import FaissStore
 
 
@@ -318,7 +322,11 @@ class TestGetNewProjectsSummary:
         """Test: Lange Texte werden gekürzt."""
         # Erstelle DataFrame mit langen Strings
         df = pd.DataFrame(
-            {'="FKZ"': ["TEST001"], '="Zuwendungsempfänger"': ["X" * 100], '="Thema"': ["Y" * 100]}  # Sehr lang  # Sehr lang
+            {
+                '="FKZ"': ["TEST001"],
+                '="Zuwendungsempfänger"': ["X" * 100],
+                '="Thema"': ["Y" * 100],
+            }  # Sehr lang  # Sehr lang
         )
 
         mock_faiss = MagicMock(spec=FaissStore)

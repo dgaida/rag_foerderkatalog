@@ -64,7 +64,10 @@ class ProjectSearchEngine:
     """
 
     def __init__(
-        self, csv_file: Optional[Path] = None, provider: EmbeddingProvider = "ollama", embed_model: Optional[str] = None
+        self,
+        csv_file: Optional[Path] = None,
+        provider: EmbeddingProvider = "ollama",
+        embed_model: Optional[str] = None,
     ):
         """Initialisiert die Search Engine.
 
@@ -79,7 +82,11 @@ class ProjectSearchEngine:
         self.embed_model = embed_model
         self.faiss = FaissStore(provider=provider)
 
-        logger.info("SearchEngine initialisiert mit Provider: %s, Modell: %s", provider, embed_model or "default")
+        logger.info(
+            "SearchEngine initialisiert mit Provider: %s, Modell: %s",
+            provider,
+            embed_model or "default",
+        )
 
     def _extract_year(self, date_str: str) -> Optional[int]:
         """Extrahiert die Jahreszahl aus einem Datumsstring.
@@ -225,7 +232,11 @@ class ProjectSearchEngine:
             )
             return
 
-        logger.info("Erzeuge Embeddings für %d Dokumente mit %s (kann lange dauern)...", len(self.df), self.provider)
+        logger.info(
+            "Erzeuge Embeddings für %d Dokumente mit %s (kann lange dauern)...",
+            len(self.df),
+            self.provider,
+        )
 
         for idx, row in self.df.iterrows():
             text = self._build_embedding_text(row)
@@ -290,7 +301,12 @@ class ProjectSearchEngine:
             results["__score"] = scores
             results = results.sort_values("__score", ascending=False)
 
-            logger.info("Semantische Suche (%s) nach '%s' lieferte %d Treffer", self.provider, query, len(results))
+            logger.info(
+                "Semantische Suche (%s) nach '%s' lieferte %d Treffer",
+                self.provider,
+                query,
+                len(results),
+            )
             return results
 
         except Exception as e:

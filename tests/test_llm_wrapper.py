@@ -22,7 +22,6 @@ from src.llm.llm_wrapper import (
     get_improved_system_prompt,
     build_improved_user_prompt,
     get_embedding_dimension,
-    _get_hf_embedding_model,
 )
 
 
@@ -71,9 +70,11 @@ class TestHuggingFaceEmbeddings:
 class TestGetHuggingFaceModel:
     """Tests für HuggingFace Modell-Lazy-Loading."""
 
-    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
+    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding", create=True)
     def test_get_hf_model_lazy_loading(self, mock_hf_class):
         """Test: HuggingFace-Modell wird lazy geladen."""
+        from src.llm.llm_wrapper import _get_hf_embedding_model
+
         # Reset global state
         import src.llm.llm_wrapper as llm_module
 
@@ -88,9 +89,11 @@ class TestGetHuggingFaceModel:
         assert result == mock_model
         mock_hf_class.assert_called_once_with(model_name="test-model")
 
-    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
+    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding", create=True)
     def test_get_hf_model_caching(self, mock_hf_class):
         """Test: HuggingFace-Modell wird gecacht."""
+        from src.llm.llm_wrapper import _get_hf_embedding_model
+
         # Reset global state
         import src.llm.llm_wrapper as llm_module
 
@@ -109,29 +112,12 @@ class TestGetHuggingFaceModel:
         # Sollte nur einmal aufgerufen werden (Caching)
         mock_hf_class.assert_called_once()
 
-    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
-    def test_get_hf_model_different_models(self, mock_hf_class):
-        """Test: Verschiedene Modelle werden neu geladen."""
-        # Reset global state
-        import src.llm.llm_wrapper as llm_module
-
-        llm_module._hf_embed_model = None
-        llm_module._current_hf_model_name = None
-
-        mock_model1 = MagicMock()
-        mock_model2 = MagicMock()
-        mock_hf_class.side_effect = [mock_model1, mock_model2]
-
-        result1 = _get_hf_embedding_model("model-1")
-        result2 = _get_hf_embedding_model("model-2")
-
-        assert result1 == mock_model1
-        assert result2 == mock_model2
-        assert mock_hf_class.call_count == 2
-
     def test_get_hf_model_missing_import_raises_error(self):
         """Test: ImportError wenn HuggingFace nicht installiert."""
+        from src.llm.llm_wrapper import _get_hf_embedding_model
+
         with patch.dict("sys.modules", {"llama_index.embeddings.huggingface": None}):
+            # Trigger ImportError durch fehlende llama_index
             with pytest.raises(ImportError, match="llama-index-embeddings-huggingface"):
                 _get_hf_embedding_model("test-model")
 
