@@ -5,6 +5,10 @@ Tests für:
 - Embedding-Erzeugung
 - Chat-Completion
 - Prompt-Generierung
+- HuggingFace Embedding-Provider
+- Embedding-Dimension-Erkennung
+- Error-Handling
+- Provider-Switching
 """
 
 import pytest
@@ -17,7 +21,238 @@ from src.llm.llm_wrapper import (
     embed_text,
     get_improved_system_prompt,
     build_improved_user_prompt,
+    get_embedding_dimension,
+    _get_hf_embedding_model,
 )
+
+
+class TestHuggingFaceEmbeddings:
+    """Tests für HuggingFace Embedding-Provider."""
+
+    @patch("src.llm.llm_wrapper._get_hf_embedding_model")
+    def test_embed_text_huggingface_success(self, mock_get_model):
+        """Test: HuggingFace Embeddings funktionieren."""
+        mock_model = MagicMock()
+        mock_model.get_text_embedding.return_value = [0.1, 0.2, 0.3]
+        mock_get_model.return_value = mock_model
+
+        result = embed_text("test text", provider="huggingface")
+
+        assert result == [0.1, 0.2, 0.3]
+        mock_model.get_text_embedding.assert_called_once_with("test text")
+
+    @patch("src.llm.llm_wrapper._get_hf_embedding_model")
+    def test_embed_text_huggingface_with_custom_model(self, mock_get_model):
+        """Test: Custom HuggingFace-Modell wird verwendet."""
+        mock_model = MagicMock()
+        mock_model.get_text_embedding.return_value = [1.0] * 384
+        mock_get_model.return_value = mock_model
+
+        embed_text("test", provider="huggingface", model="intfloat/e5-small-v2")
+
+        mock_get_model.assert_called_once_with("intfloat/e5-small-v2")
+
+    def test_embed_text_invalid_provider_raises_error(self):
+        """Test: Ungültiger Provider führt zu ValueError."""
+        with pytest.raises(ValueError, match="Unbekannter Provider"):
+            embed_text("test", provider="invalid_provider")
+
+    @patch("src.llm.llm_wrapper._get_hf_embedding_model")
+    def test_embed_text_huggingface_invalid_format_raises_error(self, mock_get_model):
+        """Test: Ungültiges Embedding-Format führt zu ValueError."""
+        mock_model = MagicMock()
+        mock_model.get_text_embedding.return_value = "invalid_format"
+        mock_get_model.return_value = mock_model
+
+        with pytest.raises(ValueError, match="unerwartetes Format"):
+            embed_text("test", provider="huggingface")
+
+
+class TestGetHuggingFaceModel:
+    """Tests für HuggingFace Modell-Lazy-Loading."""
+
+    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
+    def test_get_hf_model_lazy_loading(self, mock_hf_class):
+        """Test: HuggingFace-Modell wird lazy geladen."""
+        # Reset global state
+        import src.llm.llm_wrapper as llm_module
+
+        llm_module._hf_embed_model = None
+        llm_module._current_hf_model_name = None
+
+        mock_model = MagicMock()
+        mock_hf_class.return_value = mock_model
+
+        result = _get_hf_embedding_model("test-model")
+
+        assert result == mock_model
+        mock_hf_class.assert_called_once_with(model_name="test-model")
+
+    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
+    def test_get_hf_model_caching(self, mock_hf_class):
+        """Test: HuggingFace-Modell wird gecacht."""
+        # Reset global state
+        import src.llm.llm_wrapper as llm_module
+
+        llm_module._hf_embed_model = None
+        llm_module._current_hf_model_name = None
+
+        mock_model = MagicMock()
+        mock_hf_class.return_value = mock_model
+
+        # Erstes Laden
+        result1 = _get_hf_embedding_model("same-model")
+        # Zweites Laden (sollte Cache verwenden)
+        result2 = _get_hf_embedding_model("same-model")
+
+        assert result1 == result2
+        # Sollte nur einmal aufgerufen werden (Caching)
+        mock_hf_class.assert_called_once()
+
+    @patch("src.llm.llm_wrapper.HuggingFaceEmbedding")
+    def test_get_hf_model_different_models(self, mock_hf_class):
+        """Test: Verschiedene Modelle werden neu geladen."""
+        # Reset global state
+        import src.llm.llm_wrapper as llm_module
+
+        llm_module._hf_embed_model = None
+        llm_module._current_hf_model_name = None
+
+        mock_model1 = MagicMock()
+        mock_model2 = MagicMock()
+        mock_hf_class.side_effect = [mock_model1, mock_model2]
+
+        result1 = _get_hf_embedding_model("model-1")
+        result2 = _get_hf_embedding_model("model-2")
+
+        assert result1 == mock_model1
+        assert result2 == mock_model2
+        assert mock_hf_class.call_count == 2
+
+    def test_get_hf_model_missing_import_raises_error(self):
+        """Test: ImportError wenn HuggingFace nicht installiert."""
+        with patch.dict("sys.modules", {"llama_index.embeddings.huggingface": None}):
+            with pytest.raises(ImportError, match="llama-index-embeddings-huggingface"):
+                _get_hf_embedding_model("test-model")
+
+
+class TestGetEmbeddingDimension:
+    """Tests für get_embedding_dimension()."""
+
+    @patch("src.llm.llm_wrapper.embed_text")
+    def test_get_dimension_ollama(self, mock_embed):
+        """Test: Dimension für Ollama-Modell wird ermittelt."""
+        mock_embed.return_value = [0.1] * 768
+
+        dim = get_embedding_dimension("ollama", "nomic-embed-text")
+
+        assert dim == 768
+        mock_embed.assert_called_once_with("test", provider="ollama", model="nomic-embed-text")
+
+    @patch("src.llm.llm_wrapper.embed_text")
+    def test_get_dimension_huggingface(self, mock_embed):
+        """Test: Dimension für HuggingFace-Modell wird ermittelt."""
+        mock_embed.return_value = [0.1] * 384
+
+        dim = get_embedding_dimension("huggingface", "intfloat/e5-small-v2")
+
+        assert dim == 384
+
+    @patch("src.llm.llm_wrapper.embed_text")
+    def test_get_dimension_default_model(self, mock_embed):
+        """Test: Dimension mit Default-Modell."""
+        mock_embed.return_value = [0.1] * 512
+
+        dim = get_embedding_dimension("ollama")
+
+        assert dim == 512
+        # Sollte mit model=None aufgerufen werden
+        mock_embed.assert_called_once_with("test", provider="ollama", model=None)
+
+
+class TestOllamaEmbeddingEdgeCases:
+    """Tests für Edge-Cases bei Ollama Embeddings."""
+
+    @patch("src.llm.llm_wrapper.ollama_embed")
+    def test_embed_ollama_with_dict_and_embedding_key(self, mock_embed):
+        """Test: Ollama-Response mit 'embedding' Key (statt 'embeddings')."""
+        mock_embed.return_value = {"embedding": [1.0, 2.0, 3.0]}
+
+        result = embed_text("test", provider="ollama")
+
+        assert result == [1.0, 2.0, 3.0]
+
+    @patch("src.llm.llm_wrapper.ollama_embed")
+    def test_embed_ollama_with_nested_list(self, mock_embed):
+        """Test: Ollama-Response mit verschachtelter Liste."""
+        mock_embed.return_value = {"embeddings": [[1.5, 2.5, 3.5]]}
+
+        result = embed_text("test", provider="ollama")
+
+        # Sollte die innere Liste extrahieren
+        assert result == [1.5, 2.5, 3.5]
+
+    @patch("src.llm.llm_wrapper.ollama_embed")
+    def test_embed_ollama_converts_to_float(self, mock_embed):
+        """Test: Integer-Werte werden zu Float konvertiert."""
+        mock_embed.return_value = {"embeddings": [[1, 2, 3]]}
+
+        result = embed_text("test", provider="ollama")
+
+        assert all(isinstance(x, float) for x in result)
+        assert result == [1.0, 2.0, 3.0]
+
+    @patch("src.llm.llm_wrapper.ollama_embed")
+    def test_embed_ollama_exception_is_raised(self, mock_embed):
+        """Test: Exceptions werden weitergeleitet."""
+        mock_embed.side_effect = RuntimeError("Ollama connection error")
+
+        with pytest.raises(RuntimeError, match="Ollama connection error"):
+            embed_text("test", provider="ollama")
+
+
+class TestPromptFunctions:
+    """Tests für Prompt-Generierungs-Funktionen."""
+
+    def test_system_prompt_contains_keywords(self):
+        """Test: System-Prompt enthält wichtige Keywords."""
+        from src.llm.llm_wrapper import get_improved_system_prompt
+
+        prompt = get_improved_system_prompt()
+
+        keywords = ["KI-Assistent", "BMBF", "Förderkennzeichen", "FKZ", "Regeln", "Aufgaben"]
+        for keyword in keywords:
+            assert keyword in prompt
+
+    def test_user_prompt_includes_all_snippets(self):
+        """Test: User-Prompt enthält alle Snippets."""
+        from src.llm.llm_wrapper import build_improved_user_prompt
+
+        snippets = ["Snippet 1: FKZ ABC123", "Snippet 2: FKZ DEF456", "Snippet 3: FKZ GHI789"]
+
+        prompt = build_improved_user_prompt(snippets, "Test Query")
+
+        for snippet in snippets:
+            assert snippet in prompt
+
+    def test_user_prompt_includes_query(self):
+        """Test: User-Prompt enthält die Query."""
+        from src.llm.llm_wrapper import build_improved_user_prompt
+
+        query = "Künstliche Intelligenz Projekte Bayern"
+        prompt = build_improved_user_prompt(["Snippet"], query)
+
+        assert query in prompt
+
+    def test_user_prompt_structure(self):
+        """Test: User-Prompt hat erwartete Struktur."""
+        from src.llm.llm_wrapper import build_improved_user_prompt
+
+        prompt = build_improved_user_prompt(["Test"], "Query")
+
+        assert "KONTEXT" in prompt
+        assert "NUTZERANFRAGE" in prompt
+        assert "ANWEISUNG" in prompt
 
 
 class TestSavePromptToMd:

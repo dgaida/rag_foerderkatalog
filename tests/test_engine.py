@@ -6,6 +6,10 @@ Tests für:
 - Embedding-Text-Erzeugung
 - Semantische Suche
 - Kontextbasierte Antwortgenerierung
+- Provider-Switching
+- build_embeddings_if_missing
+- get_index_info
+- Error-Handling
 """
 
 import pytest
@@ -14,6 +18,268 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from src.search.engine import ProjectSearchEngine
+
+
+class TestProviderSpecific:
+    """Tests für provider-spezifische Funktionalität."""
+
+    def test_engine_with_ollama_provider(self):
+        """Test: Engine mit Ollama-Provider initialisiert."""
+        engine = ProjectSearchEngine(provider="ollama")
+
+        assert engine.provider == "ollama"
+        assert engine.faiss.provider == "ollama"
+
+    def test_engine_with_huggingface_provider(self):
+        """Test: Engine mit HuggingFace-Provider initialisiert."""
+        engine = ProjectSearchEngine(provider="huggingface")
+
+        assert engine.provider == "huggingface"
+        assert engine.faiss.provider == "huggingface"
+
+    def test_engine_with_custom_embed_model(self):
+        """Test: Engine mit Custom Embedding-Modell."""
+        engine = ProjectSearchEngine(provider="huggingface", embed_model="intfloat/e5-small-v2")
+
+        assert engine.embed_model == "intfloat/e5-small-v2"
+
+
+class TestBuildEmbeddingsIfMissing:
+    """Tests für build_embeddings_if_missing()."""
+
+    def test_build_embeddings_skips_if_index_exists(self):
+        """Test: Embeddings werden übersprungen wenn Index existiert."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')
+            f.write('="ABC123";="Test"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path, provider="ollama")
+            engine.load_and_clean()
+
+            # Mock existierenden Index
+            mock_index = MagicMock()
+            mock_index.ntotal = 100
+            engine.faiss.index = mock_index
+
+            # Sollte nichts tun
+            engine.build_embeddings_if_missing()
+
+            # Index sollte unverändert sein
+            assert engine.faiss.index.ntotal == 100
+        finally:
+            csv_path.unlink()
+
+    @patch("src.search.engine.embed_text")
+    def test_build_embeddings_creates_new_index(self, mock_embed):
+        """Test: Neue Embeddings werden erstellt wenn Index leer."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Zuwendungsempfänger";="Thema"\n')
+            f.write('="ABC";="Uni Test";="KI"\n')
+            f.write('="DEF";="Institut";="Robotik"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path, provider="ollama")
+            engine.load_and_clean()
+
+            mock_embed.return_value = [0.1] * 768
+
+            engine.build_embeddings_if_missing()
+
+            # Embeddings sollten erstellt worden sein
+            assert engine.faiss.index is not None
+            assert engine.faiss.index.ntotal == 2
+            assert mock_embed.call_count == 2
+        finally:
+            csv_path.unlink()
+
+    def test_build_embeddings_raises_without_df(self):
+        """Test: RuntimeError wenn DataFrame nicht geladen."""
+        engine = ProjectSearchEngine(provider="ollama")
+
+        with pytest.raises(RuntimeError, match="nicht geladen"):
+            engine.build_embeddings_if_missing()
+
+    @patch("src.search.engine.embed_text")
+    def test_build_embeddings_skips_empty_texts(self, mock_embed):
+        """Test: Leere Texte werden übersprungen."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')
+            f.write('="ABC";=\n')  # Leerer Eintrag
+            f.write('="DEF";="Valid"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            mock_embed.return_value = [0.1] * 768
+
+            engine.build_embeddings_if_missing()
+
+            # Nur 1 Embedding sollte erstellt werden (leerer übersprungen)
+            assert mock_embed.call_count == 1
+        finally:
+            csv_path.unlink()
+
+
+class TestGetIndexInfo:
+    """Tests für get_index_info()."""
+
+    def test_get_index_info_returns_dict(self):
+        """Test: get_index_info gibt Dictionary zurück."""
+        engine = ProjectSearchEngine(provider="ollama")
+
+        info = engine.get_index_info()
+
+        assert isinstance(info, dict)
+
+    def test_get_index_info_contains_csv_info(self):
+        """Test: get_index_info enthält CSV-Informationen."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')
+            f.write('="ABC";="Test"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            info = engine.get_index_info()
+
+            assert "csv_loaded" in info
+            assert "csv_rows" in info
+            assert info["csv_loaded"] is True
+            assert info["csv_rows"] == 1
+        finally:
+            csv_path.unlink()
+
+    def test_get_index_info_without_loaded_csv(self):
+        """Test: get_index_info funktioniert ohne geladene CSV."""
+        engine = ProjectSearchEngine(provider="huggingface")
+
+        info = engine.get_index_info()
+
+        assert info["csv_loaded"] is False
+        assert info["csv_rows"] == 0
+
+
+class TestSearchEdgeCases:
+    """Tests für Edge-Cases bei der Suche."""
+
+    @patch("src.search.engine.embed_text")
+    def test_search_with_empty_query(self, mock_embed):
+        """Test: Suche mit leerer Query."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')
+            f.write('="ABC";="Test"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            mock_embed.return_value = [0.0] * 768
+
+            # Leere Query sollte funktionieren aber nichts finden
+            result = engine.search("", k=5)
+
+            # Sollte zumindest ein DataFrame zurückgeben (kann leer sein)
+            assert isinstance(result, pd.DataFrame)
+        finally:
+            csv_path.unlink()
+
+    @patch("src.search.engine.embed_text")
+    def test_search_handles_embed_exception(self, mock_embed):
+        """Test: Exception beim Embedding wird gefangen."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')
+            f.write('="ABC";="Test"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            mock_embed.side_effect = RuntimeError("Embedding failed")
+
+            # Sollte leeres DataFrame zurückgeben statt Exception
+            result = engine.search("test query", k=5)
+
+            assert isinstance(result, pd.DataFrame)
+            assert result.empty
+        finally:
+            csv_path.unlink()
+
+
+class TestAnswerWithContextEdgeCases:
+    """Tests für Edge-Cases bei answer_with_context()."""
+
+    @patch("src.search.engine.ProjectSearchEngine.search")
+    def test_answer_with_context_no_results(self, mock_search):
+        """Test: Antwort bei fehlenden Suchergebnissen."""
+        engine = ProjectSearchEngine(provider="ollama")
+        engine.df = pd.DataFrame()
+
+        mock_search.return_value = pd.DataFrame()
+
+        answer = engine.answer_with_context("test query")
+
+        assert "Keine relevanten Projekte" in answer
+
+    @patch("src.search.engine.chat_system_query")
+    @patch("src.search.engine.ProjectSearchEngine.search")
+    def test_answer_with_context_handles_llm_exception(self, mock_search, mock_chat):
+        """Test: Exception beim LLM-Call wird weitergeleitet."""
+        engine = ProjectSearchEngine(provider="ollama")
+        engine.df = pd.DataFrame({'="FKZ"': ["ABC"]})
+
+        mock_df = pd.DataFrame({'="FKZ"': ["ABC123"], '="Thema"': ["Test"]})
+        mock_search.return_value = mock_df
+
+        mock_chat.side_effect = RuntimeError("LLM API Error")
+
+        with pytest.raises(RuntimeError, match="LLM API Error"):
+            engine.answer_with_context("test query")
+
+
+class TestDataCleaningEdgeCases:
+    """Tests für Edge-Cases bei der Datenbereinigung."""
+
+    def test_load_and_clean_handles_missing_columns(self):
+        """Test: Fehlende Spalten werden korrekt behandelt."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Thema"\n')  # Keine Laufzeit-Spalten
+            f.write('="ABC";="Test"\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            # Sollte funktionieren, Laufzeit-Spalte sollte leer sein
+            assert "__laufzeit" in engine.df.columns
+            assert engine.df["__laufzeit"].iloc[0] == ""
+        finally:
+            csv_path.unlink()
+
+    def test_load_and_clean_invalid_foerdersumme(self):
+        """Test: Ungültige Fördersummen werden zu NaN."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="latin1") as f:
+            f.write('="FKZ";="Fördersumme in EUR"\n')
+            f.write('="ABC";invalid_number\n')
+            csv_path = Path(f.name)
+
+        try:
+            engine = ProjectSearchEngine(csv_file=csv_path)
+            engine.load_and_clean()
+
+            # Ungültige Summe sollte NaN sein
+            assert pd.isna(engine.df['="Fördersumme in EUR"'].iloc[0])
+        finally:
+            csv_path.unlink()
 
 
 class TestYearExtraction:
