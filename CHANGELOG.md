@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2025-11-07
+
+### 🔧 Improvements
+
+**Error Messages**
+- More descriptive error messages for missing dependencies
+- Clearer warnings for dimension mismatches
+
+**Documentation**
+- Improved docstrings for public API methods
+
+### Notes
+
+**Compatibility:**
+- Fully compatible with indices created in v0.3.0
+- No re-indexing required when upgrading from v0.3.0
+
+**Migration from v0.3.0:**
+```bash
+# No special migration steps required
+pip install --upgrade rag-foerderkatalog
+
+# Or from source
+git pull origin master
+git checkout v0.3.1
+pip install -e .
+```
+
+---
+
 ## [0.3.0] - 2025-11-03
 
 ### 🎉 Complete Release
@@ -235,7 +265,7 @@ Vollständiges Paket mit CSV und Index für vereinfachten Setup.
 
 ## [Unreleased]
 
-### Geplant für v0.3.0
+### Geplant für v0.4.0
 
 **Features:**
 - [ ] **FastAPI REST-Endpunkt** für programmatischen Zugriff
@@ -262,6 +292,67 @@ Vollständiges Paket mit CSV und Index für vereinfachten Setup.
 ---
 
 ## Migration Guides
+
+### v0.3.0 → v0.3.1
+
+**Kein manueller Migrations-Aufwand erforderlich!**
+
+Einfach updaten:
+
+```bash
+# Mit pip
+pip install --upgrade rag-foerderkatalog
+
+# Oder aus Source
+git pull origin master
+git checkout v0.3.1
+pip install -e .
+```
+
+Ihr bestehender Index bleibt vollständig kompatibel.
+
+### v0.2.0 → v0.3.0
+
+**Schritt 1: Repository aktualisieren**
+
+```bash
+git pull origin master
+git checkout v0.3.0
+```
+
+**Schritt 2: Dependencies aktualisieren**
+
+```bash
+# Basis-Update
+pip install --upgrade -e .
+
+# Für HuggingFace-Support
+pip install -r requirements_huggingface.txt
+```
+
+**Schritt 3: Index-Struktur migrieren**
+
+Ihr bestehender Ollama-Index bleibt erhalten:
+
+```bash
+# Prüfen Sie Ihren Index
+python main.py --index-info
+
+# Weiter mit Ollama
+python main.py --no-embeddings
+
+# Oder: Neuen HuggingFace-Index erstellen
+python main.py --provider huggingface --batch-size 5000
+```
+
+**Schritt 4: Konfiguration anpassen**
+
+Falls Sie `src/config.py` modifiziert haben:
+
+- Verwenden Sie `get_index_files(provider)` für Pfade
+- Aktualisieren Sie Imports: `from src.config import EmbeddingProvider`
+
+**Keine Breaking Changes** für Standard-Nutzer! 🎉
 
 ### v0.1.0 → v0.2.0
 
@@ -316,5 +407,7 @@ Falls Sie `src/config.py` modifiziert haben:
 
 ---
 
+[0.3.1]: https://github.com/dgaida/rag_foerderkatalog/releases/tag/v0.3.1
+[0.3.0]: https://github.com/dgaida/rag_foerderkatalog/releases/tag/v0.3.0
 [0.2.0]: https://github.com/dgaida/rag_foerderkatalog/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dgaida/rag_foerderkatalog/releases/tag/v0.1.0

@@ -1,7 +1,7 @@
 """Version information for rag-foerderkatalog."""
 
-__version__ = "0.3.0"
-__version_info__ = tuple(int(i) for i in __version__.split("."))
+__version__ = "0.3.1"
+__version_info__ = (0, 3, 1)
 
 __title__ = "RAG Förderkatalog"
 __description__ = "RAG-basierte semantische Suche in deutschen Forschungsförderprojekten"
