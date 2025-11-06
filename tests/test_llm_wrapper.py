@@ -84,10 +84,11 @@ class TestGetHuggingFaceModel:
         mock_model = MagicMock()
         mock_hf_class.return_value = mock_model
 
-        result = _get_hf_embedding_model("test-model")
+        # Verwende einen Mock-Modellnamen statt einen echten
+        result = _get_hf_embedding_model("mock-test-model")
 
         assert result == mock_model
-        mock_hf_class.assert_called_once_with(model_name="test-model")
+        mock_hf_class.assert_called_once_with(model_name="mock-test-model")
 
     @patch("src.llm.llm_wrapper.HuggingFaceEmbedding", create=True)
     def test_get_hf_model_caching(self, mock_hf_class):
@@ -103,10 +104,11 @@ class TestGetHuggingFaceModel:
         mock_model = MagicMock()
         mock_hf_class.return_value = mock_model
 
+        # Verwende Mock-Modellnamen
         # Erstes Laden
-        result1 = _get_hf_embedding_model("same-model")
+        result1 = _get_hf_embedding_model("mock-same-model")
         # Zweites Laden (sollte Cache verwenden)
-        result2 = _get_hf_embedding_model("same-model")
+        result2 = _get_hf_embedding_model("mock-same-model")
 
         assert result1 == result2
         # Sollte nur einmal aufgerufen werden (Caching)
@@ -352,7 +354,6 @@ class TestChatSystemQuery:
         result = chat_system_query("You are helpful", "What is AI?", model="test-model")
 
         assert result == "Test response"
-        # FIX: Berücksichtige alle Parameter, die tatsächlich übergeben werden
         mock_client_class.assert_called_once_with(llm="test-model", max_tokens=1024, temperature=0.5)
         mock_save.assert_called_once()
 
@@ -366,7 +367,6 @@ class TestChatSystemQuery:
 
         chat_system_query("System", "User", model=None)
 
-        # FIX: Berücksichtige alle Parameter
         mock_client_class.assert_called_once_with(llm=None, max_tokens=1024, temperature=0.5)
 
     @patch("src.llm.llm_wrapper.LLMClient")
