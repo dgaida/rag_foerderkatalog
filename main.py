@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 """
-main.py
+main.py - AKTUALISIERT mit FKZ-basierter Validierung
 
-Startpunkt für die RAG-Anwendung mit inkrementeller Indizierung und HuggingFace-Support.
-
-Neue Features:
-- Unterstützung für HuggingFace-Embeddings neben Ollama
-- Provider-spezifische Indizes (vector.index vs. vector_hf.index)
-- CLI-Parameter zur Auswahl des Embedding-Providers
-
-Voraussetzungen:
-- Für Ollama: Ollama läuft lokal mit Modell (z.B. 'nomic-embed-text')
-- Für HuggingFace: llama-index-embeddings-huggingface installiert
+Änderungen:
+- Nutzt FKZIndexValidator statt IndexValidator
+- Ermöglicht inkrementelle Updates bei geänderter CSV-Sortierung
+- Erkennt neue Projekte unabhängig von ihrer Position in der CSV
 """
 from __future__ import annotations
 
@@ -22,21 +16,16 @@ import json
 from src.utils.logging_config import setup_logging, get_logger
 from src.search.engine import ProjectSearchEngine
 from src.llm.llm_wrapper import embed_text
-from src.config import get_index_files, HF_EMBED_MODEL_ALTERNATIVES, EmbeddingProvider
-from src.utils.index_validator import IndexValidator, get_new_projects_summary
+from src.config import get_index_files, EmbeddingProvider
+
+# GEÄNDERT: Nutze FKZ-Validator
+from src.utils.fkz_index_validator import FKZIndexValidator, get_projects_to_index
 
 logger = get_logger(__name__)
 
 
 def load_progress(provider: EmbeddingProvider) -> int:
-    """Lädt den aktuellen Indizierungsfortschritt für einen Provider.
-
-    Args:
-        provider: "ollama" oder "huggingface"
-
-    Returns:
-        int: Anzahl der bereits indizierten Zeilen.
-    """
+    """Lädt den aktuellen Indizierungsfortschritt."""
     _, _, progress_file = get_index_files(provider)
 
     if progress_file.exists():
@@ -50,12 +39,7 @@ def load_progress(provider: EmbeddingProvider) -> int:
 
 
 def save_progress(indexed_rows: int, provider: EmbeddingProvider) -> None:
-    """Speichert den aktuellen Indizierungsfortschritt für einen Provider.
-
-    Args:
-        indexed_rows: Anzahl der bisher indizierten Zeilen.
-        provider: "ollama" oder "huggingface"
-    """
+    """Speichert den aktuellen Indizierungsfortschritt."""
     try:
         _, _, progress_file = get_index_files(provider)
         progress_file.parent.mkdir(parents=True, exist_ok=True)
@@ -67,44 +51,44 @@ def save_progress(indexed_rows: int, provider: EmbeddingProvider) -> None:
         logger.error("Fehler beim Speichern des Fortschritts (%s): %s", provider, e)
 
 
-def build_embeddings_for_missing(engine: ProjectSearchEngine, missing_indices: list, batch_size: int = 5000) -> None:
-    """Indiziert nur die fehlenden Projekte.
+def index_new_projects_fkz(engine: ProjectSearchEngine, new_projects_df, batch_size: int = 5000) -> None:
+    """Indiziert neue Projekte basierend auf FKZ-Validierung.
 
     Args:
-        engine: ProjectSearchEngine mit geladenem engine.df
-        missing_indices: Liste der fehlenden DataFrame-Indizes
+        engine: ProjectSearchEngine mit geladenem DataFrame
+        new_projects_df: DataFrame mit neuen Projekten
         batch_size: Maximale Anzahl pro Durchlauf
     """
-    if not missing_indices:
-        logger.info("✅ Keine fehlenden Projekte zum Indizieren")
+    if new_projects_df.empty:
+        logger.info("✅ Keine neuen Projekte zum Indizieren")
         return
 
-    total_missing = len(missing_indices)
-    batch_end = min(batch_size, total_missing)
-    indices_to_process = missing_indices[:batch_end]
+    total_new = len(new_projects_df)
+    batch_end = min(batch_size, total_new)
+    projects_to_process = new_projects_df.head(batch_end)
 
     logger.info(
-        "📊 Indiziere %d von %d fehlenden Projekten mit %s (%.1f%%)",
-        len(indices_to_process),
-        total_missing,
+        "📊 Indiziere %d von %d neuen Projekten mit %s (%.1f%%)",
+        len(projects_to_process),
+        total_new,
         engine.provider,
-        (len(indices_to_process) / total_missing) * 100,
+        (len(projects_to_process) / total_new) * 100,
     )
 
     added = 0
-    for i, idx in enumerate(indices_to_process, 1):
-        row = engine.df.iloc[idx]
-
+    for i, (idx, row) in enumerate(projects_to_process.iterrows(), 1):
         # Erstelle Embedding-Text
         text = engine._build_embedding_text(row)
 
         if not text:
-            logger.warning("⚠️ Leerer Text für Zeile %d, überspringe", idx)
+            fkz = row.get('="FKZ"', "UNBEKANNT")
+            logger.warning("⚠️ Leerer Text für FKZ %s, überspringe", fkz)
             continue
 
         try:
             vec = embed_text(text, provider=engine.provider, model=engine.embed_model)
             if vec:
+                # WICHTIG: Speichere DataFrame-Index als doc_id
                 engine.faiss.add(vec, doc_id=str(idx), persist_now=False)
                 added += 1
 
@@ -113,32 +97,34 @@ def build_embeddings_for_missing(engine: ProjectSearchEngine, missing_indices: l
                     logger.info(
                         "⏳ Fortschritt: %d/%d (%.1f%%)",
                         added,
-                        len(indices_to_process),
-                        (added / len(indices_to_process)) * 100,
+                        len(projects_to_process),
+                        (added / len(projects_to_process)) * 100,
                     )
             else:
-                logger.warning("⚠️ Leerer Embedding-Vektor für idx=%d", idx)
+                fkz = row.get('="FKZ"', "UNBEKANNT")
+                logger.warning("⚠️ Leerer Embedding-Vektor für FKZ=%s", fkz)
         except Exception as e:
-            logger.exception("❌ Fehler beim Erzeugen des Embeddings für idx=%d: %s", idx, e)
+            fkz = row.get('="FKZ"', "UNBEKANNT")
+            logger.exception("❌ Fehler beim Erzeugen des Embeddings für FKZ=%s: %s", fkz, e)
 
     # Persistiere Index
     engine.faiss.persist()
 
-    remaining = total_missing - len(indices_to_process)
+    remaining = total_new - len(projects_to_process)
     logger.info(
         "✅ Batch abgeschlossen: %d Embeddings hinzugefügt (%s). " "Noch %d Projekte verbleibend (%.1f%%)",
         added,
         engine.provider,
         remaining,
-        (remaining / total_missing) * 100 if total_missing > 0 else 0,
+        (remaining / total_new) * 100 if total_new > 0 else 0,
     )
 
     if remaining == 0:
-        logger.info("🎉 FERTIG! Alle fehlenden Projekte wurden erfolgreich indiziert!")
+        logger.info("🎉 FERTIG! Alle neuen Projekte wurden erfolgreich indiziert!")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Startet die RAG Förderprojekte App mit Ollama oder HuggingFace Embeddings")
+    parser = argparse.ArgumentParser(description="Startet die RAG Förderprojekte App mit FKZ-basierter Validierung")
 
     # Provider Selection
     parser.add_argument(
@@ -155,7 +141,7 @@ def parse_args():
         "-m",
         type=str,
         default=None,
-        help=("Embedding-Modell. Defaults:\n" "  Ollama: nomic-embed-text\n" "  HuggingFace: intfloat/e5-small-v2"),
+        help="Embedding-Modell",
     )
 
     # Indexing Options
@@ -174,7 +160,7 @@ def parse_args():
     # Validation Options
     parser.add_argument("--validate-only", action="store_true", help="Nur Index validieren, nicht starten")
 
-    parser.add_argument("--show-missing", action="store_true", help="Zeige Details zu fehlenden Projekten")
+    parser.add_argument("--show-missing", action="store_true", help="Zeige Details zu neuen Projekten")
 
     parser.add_argument("--index-info", action="store_true", help="Zeige Informationen über alle Indizes")
 
@@ -226,17 +212,10 @@ def main():
         show_all_index_info()
         return
 
-    logger.info("🚀 Starte RAG Förderkatalog")
+    logger.info("🚀 Starte RAG Förderkatalog (FKZ-basierte Validierung)")
     logger.info("📦 Embedding-Provider: %s", args.provider.upper())
     if args.embed_model:
         logger.info("🎯 Embedding-Modell: %s", args.embed_model)
-
-    # Zeige HuggingFace-Modelloptionen
-    if args.provider == "huggingface" and not args.embed_model:
-        logger.info("💡 Verfügbare HuggingFace-Modelle:")
-        for model in HF_EMBED_MODEL_ALTERNATIVES:
-            logger.info("   - %s", model)
-        logger.info("")
 
     # Engine initialisieren
     engine = ProjectSearchEngine(provider=args.provider, embed_model=args.embed_model)
@@ -248,20 +227,20 @@ def main():
         logger.exception("❌ Fehler beim Laden der CSV: %s", e)
         raise
 
-    # Index-Validierung durchführen
+    # ===== GEÄNDERT: FKZ-basierte Validierung =====
     logger.info("")
-    logger.info("🔍 Prüfe Index-Vollständigkeit (%s)...", args.provider)
+    logger.info("🔍 Prüfe Index-Vollständigkeit (FKZ-basiert)...")
 
-    validator = IndexValidator(engine.faiss, engine.df)
-    is_complete, stats = validator.validate_index()
+    validator = FKZIndexValidator(engine.faiss, engine.df)
+    is_complete, stats = validator.validate()
 
     # Detaillierter Report
     validator.log_validation_report()
 
     # Zeige neue Projekte wenn gewünscht
-    if args.show_missing and stats["missing_count"] > 0:
+    if args.show_missing and stats["new_count"] > 0:
         logger.info("")
-        summary = get_new_projects_summary(validator)
+        summary = validator.get_new_projects_summary(limit=10)
         logger.info(summary)
 
     # Nur Validierung, dann beenden
@@ -277,20 +256,20 @@ def main():
                 engine.faiss.clear()
                 save_progress(0, args.provider)
                 # Nach Clear ist der Index leer, re-validieren
-                validator = IndexValidator(engine.faiss, engine.df)
+                validator = FKZIndexValidator(engine.faiss, engine.df)
 
-            # Ermittle fehlende Einträge
-            missing_indices = validator.get_missing_indices()
+            # Ermittle neue Projekte (FKZ-basiert)
+            new_projects_df = get_projects_to_index(engine.faiss, engine.df, batch_size=args.batch_size)
 
-            if missing_indices:
+            if not new_projects_df.empty:
                 logger.info("")
-                logger.info("🔄 Starte Indizierung der fehlenden Projekte (%s)...", args.provider)
-                build_embeddings_for_missing(engine, missing_indices, batch_size=args.batch_size)
+                logger.info("🔄 Starte Indizierung der neuen Projekte (%s)...", args.provider)
+                index_new_projects_fkz(engine, new_projects_df, batch_size=args.batch_size)
 
                 # Re-validierung nach Indizierung
                 logger.info("")
                 logger.info("🔍 Erneute Validierung nach Indizierung (%s)...", args.provider)
-                validator = IndexValidator(engine.faiss, engine.df)
+                validator = FKZIndexValidator(engine.faiss, engine.df)
                 validator.log_validation_report()
             else:
                 logger.info("✅ Index ist vollständig, keine Indizierung notwendig (%s)", args.provider)
@@ -302,11 +281,11 @@ def main():
         logger.info("⏭️ Indizierung übersprungen (--no-embeddings)")
 
         # Warnung wenn Index nicht vollständig
-        if not is_complete and stats["missing_count"] > 0:
+        if not is_complete and stats["new_count"] > 0:
             logger.warning("")
             logger.warning("⚠️" * 30)
             logger.warning("⚠️  WARNUNG: Index ist nicht vollständig!")
-            logger.warning("⚠️  %d Projekte fehlen im Index (%s)", stats["missing_count"], args.provider)
+            logger.warning("⚠️  %d Projekte fehlen im Index (%s)", stats["new_count"], args.provider)
             logger.warning("⚠️  Suchergebnisse könnten unvollständig sein.")
             logger.warning("⚠️")
             logger.warning("⚠️  Zum Vervollständigen starten Sie:")
