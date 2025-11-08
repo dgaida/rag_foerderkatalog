@@ -745,9 +745,66 @@ button, input, select, textarea {
     color: var(--secondary-color);
 }
 
-.gr-dataframe td:nth-child(3) {  /* 3. Spalte = Thema */
-    min-width: 300px !important;
-    max-width: 500px !important;
+/* ===== Spaltenbreiten für DataTable ===== */
+.gr-dataframe td:nth-child(3),  /* 3. Spalte = Thema */
+.gr-dataframe th:nth-child(3) {
+    min-width: 200px !important;
+    max-width: 400px !important;
+    width: 300px !important;
+}
+
+.gr-dataframe td:nth-child(1),  /* FKZ */
+.gr-dataframe th:nth-child(1) {
+    min-width: 100px !important;
+    width: 120px !important;
+}
+
+.gr-dataframe td:nth-child(2),  /* Zuwendungsempfänger */
+.gr-dataframe th:nth-child(2) {
+    min-width: 100px !important;
+    max-width: 180px !important;
+}
+
+.gr-dataframe td:nth-child(4),  /* Bundesland */
+.gr-dataframe th:nth-child(4) {
+    min-width: 80px !important;
+    max-width: 120px !important;
+    width: 100px !important;
+}
+
+.gr-dataframe td:nth-child(5),  /* Laufzeit */
+.gr-dataframe th:nth-child(5) {
+    min-width: 100px !important;
+    width: 120px !important;
+}
+
+.gr-dataframe td:nth-child(6),  /* Fördersumme */
+.gr-dataframe th:nth-child(6) {
+    min-width: 60px !important;
+    width: 100px !important;
+}
+
+.gr-dataframe td:nth-child(7),  /* Score */
+.gr-dataframe th:nth-child(7) {
+    min-width: 80px !important;
+    width: 100px !important;
+}
+
+/* Tabelle darf horizontal scrollen */
+.dataframe,
+table,
+.gr-table,
+div[class*="table-wrap"] {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+}
+
+/* Begrenze die tatsächliche Tabellenbreite */
+.dataframe table,
+.gr-table table,
+table {
+    max-width: 1600px !important;  /* Maximale Gesamtbreite der Tabelle */
+    width: auto !important;
 }
 
 /* ===== Examples Table - Volle Breite ===== */
@@ -850,8 +907,8 @@ def get_project_details(fkz: str, engine: ProjectSearchEngine) -> str:
 
     project = matches.iloc[0]
 
-    # Erstelle detaillierte Ansicht
-    details = f"# 📋 Projekt-Details: {fkz}\n\n"
+    # Erstelle detaillierte Ansicht mit kleinerer Schrift
+    details = f'<div style="font-size: 0.9rem;">\n\n# 📋 Projekt-Details: {fkz}\n\n'
 
     # Wichtige Felder zuerst
     important_fields = [
@@ -894,6 +951,8 @@ def get_project_details(fkz: str, engine: ProjectSearchEngine) -> str:
             val = project[col]
             if pd.notna(val) and str(val).strip() and str(val) != "nan":
                 details += f"• **{label}:** {val}\n"
+
+    details += "</div>"
 
     return details
 
@@ -1100,7 +1159,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 <div class="info-card">
                     <div class="info-card-title">💡 Über diese Anwendung</div>
                     <div class="info-card-content">
-                        Diese KI-gestützte Suchmaschine durchsucht über {total_projects:,} Förderprojekte des BMBF
+                        Diese KI-gestützte Suchmaschine durchsucht über {total_projects:,} Förderprojekte des Bundes
                         (davon indiziert: {indexed_projects:,})
                         mit semantischer Vektorsuche und kontextbasierter KI-Antwortgenerierung.
                         Wählen Sie zwischen <strong>Semantischer</strong>, <strong>Keyword</strong> oder
@@ -1187,7 +1246,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                     ["Wasserstoff Energie NRW 2020-2025", "semantic", 15],
                     ["Quantencomputing Forschung", "semantic", 25],
                     ["Klimawandel Digitalisierung", "hybrid", 30],
-                    ["Medizintechnik Berlin", "keyword", 10],
+                    ["KI zur Regelung von Biogasanlagen", "hybrid", 20],
                 ],
                 inputs=[query_input, mode, k_slider],
                 label="Klicken Sie auf ein Beispiel zum Ausprobieren",
@@ -1365,7 +1424,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                     <strong style="color: #f59e0b;">LLMClient</strong>
                 </p>
                 <p style="color: #cbd5e1; font-size: 0.9rem;">
-                    📊 Datenquelle: BMBF Förderkatalog | 🧠 RAG-basierte semantische Suche
+                    📊 Datenquelle: <a href="https://foerderportal.bund.de/foekat/jsp/SucheAction.do?actionMode=searchmask" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: 600;">Förderkatalog des Bundes</a> | 🧠 RAG-basierte semantische Suche
                 </p>
             </div>
             """,

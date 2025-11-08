@@ -160,7 +160,11 @@ def parse_args():
 
     # Indexing Options
     parser.add_argument(
-        "--batch-size", "-b", type=int, default=5000, help="Anzahl der Zeilen pro Indizierungs-Batch (Standard: 5000)"
+        "--batch-size",
+        "-b",
+        type=int,
+        default=5000,
+        help="Anzahl der Zeilen pro Indizierungs-Batch (Standard: 5000)",
     )
 
     parser.add_argument("--no-embeddings", action="store_true", help="Überspringe Indizierung (nur App starten)")

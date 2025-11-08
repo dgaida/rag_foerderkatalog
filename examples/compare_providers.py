@@ -82,7 +82,11 @@ def compare_search_results(query: str, k: int = 10):
                     logger.info("      %s", thema)
 
                 # Speichere für Vergleich
-                results[provider] = {"df": df_results, "time": search_time, "dimension": info["dimension"]}
+                results[provider] = {
+                    "df": df_results,
+                    "time": search_time,
+                    "dimension": info["dimension"],
+                }
 
             logger.info("")
 
