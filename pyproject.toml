@@ -144,7 +144,7 @@ directory = "htmlcov"
 
 # ===== Black Configuration =====
 [tool.black]
-line-length = 100
+line-length = 127
 target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -166,7 +166,7 @@ extend-exclude = '''
 # ===== isort Configuration =====
 [tool.isort]
 profile = "black"
-line_length = 100
+line_length = 127
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -207,7 +207,7 @@ ignore_missing_imports = true
 
 # ===== Ruff Configuration (Alternative to Flake8) =====
 [tool.ruff]
-line-length = 100
+line-length = 127
 target-version = "py311"
 select = [
     "E",  # pycodestyle errors

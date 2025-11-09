@@ -401,7 +401,9 @@ def get_projects_to_index(faiss: FaissStore, df: pd.DataFrame, batch_size: Optio
     new_projects = validator.get_new_projects(limit=batch_size)
 
     logger.info(
-        "📋 %d Projekte müssen indiziert werden%s", len(new_projects), f" (Batch-Limit: {batch_size})" if batch_size else ""
+        "📋 %d Projekte müssen indiziert werden%s",
+        len(new_projects),
+        f" (Batch-Limit: {batch_size})" if batch_size else "",
     )
 
     return new_projects
