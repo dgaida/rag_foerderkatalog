@@ -46,13 +46,11 @@ jobs:
         coverage report | tail -n 1 | awk '{print "| Total Coverage | " $NF " |"}' >> $GITHUB_STEP_SUMMARY
 
     - name: 📈 Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: unittests
         fail_ci_if_error: false
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     - name: 📦 Upload test results
       uses: actions/upload-artifact@v4
