@@ -2,7 +2,7 @@ name: Test Suite
 
 on:
   push:
-    branches: [ main, develop, feature/** ]
+    branches: [ main, master, feature/** ]
   pull_request:
     types: [opened, synchronize, reopened]
 
