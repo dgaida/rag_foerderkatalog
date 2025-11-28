@@ -9,25 +9,16 @@ Dieses Modul implementiert die Kernfunktionalität für die Suche in Förderproj
 
 from __future__ import annotations
 
-import pandas as pd
-from typing import List, Optional
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import List, Optional
 
-from ..utils.logging_config import get_logger
+import pandas as pd
+
+from ..config import INPUT_CSV, MAX_DOCS_FOR_LLM, TOP_K_DEFAULT, EmbeddingProvider
 from ..embeddings.faiss_store import FaissStore
-from ..llm.llm_wrapper import (
-    embed_text,
-    chat_system_query,
-    get_improved_system_prompt,
-    build_improved_user_prompt,
-)
-from ..config import (
-    INPUT_CSV,
-    TOP_K_DEFAULT,
-    MAX_DOCS_FOR_LLM,
-    EmbeddingProvider,
-)
+from ..llm.llm_wrapper import build_improved_user_prompt, chat_system_query, embed_text, get_improved_system_prompt
+from ..utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

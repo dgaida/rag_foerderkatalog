@@ -10,12 +10,13 @@ Die finalen Treffer sind eine deduplizierte Kombination (semantische Treffer zue
 """
 from __future__ import annotations
 
-from typing import Optional, List
-import pandas as pd
-import gradio as gr
+from typing import List, Optional
 
-from .utils.logging_config import get_logger, setup_logging
+import gradio as gr
+import pandas as pd
+
 from .search.engine import ProjectSearchEngine
+from .utils.logging_config import get_logger, setup_logging
 
 logger = get_logger(__name__)
 

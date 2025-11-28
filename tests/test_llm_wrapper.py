@@ -11,17 +11,19 @@ Tests für:
 - Provider-Switching
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from src.llm.llm_wrapper import (
-    save_prompt_to_md,
+    build_improved_user_prompt,
     chat_system_query,
     embed_text,
-    get_improved_system_prompt,
-    build_improved_user_prompt,
     get_embedding_dimension,
+    get_improved_system_prompt,
+    save_prompt_to_md,
 )
 
 

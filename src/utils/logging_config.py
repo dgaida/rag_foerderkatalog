@@ -9,6 +9,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional
+
 from ..config import LOG_DIR
 
 # Logging-Verzeichnis

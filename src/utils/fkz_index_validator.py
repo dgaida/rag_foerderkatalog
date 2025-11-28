@@ -7,9 +7,11 @@ um neue Projekte auch bei geänderter CSV-Sortierung zu erkennen.
 """
 
 from __future__ import annotations
-from typing import Set, Tuple, Optional
-import pandas as pd
+
 from pathlib import Path
+from typing import Optional, Set, Tuple
+
+import pandas as pd
 
 from src.embeddings.faiss_store import FaissStore
 from src.utils.logging_config import get_logger

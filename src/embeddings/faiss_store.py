@@ -1,11 +1,12 @@
 # src/embeddings/faiss_store.py
-from pathlib import Path
-import numpy as np
-import faiss
 import json
+from pathlib import Path
 from typing import List, Tuple
 
-from ..config import get_index_files, EmbeddingProvider
+import faiss
+import numpy as np
+
+from ..config import EmbeddingProvider, get_index_files
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 

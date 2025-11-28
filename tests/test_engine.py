@@ -12,11 +12,13 @@ Tests für:
 - Error-Handling
 """
 
-import pytest
-import pandas as pd
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pandas as pd
+import pytest
+
 from src.search.engine import ProjectSearchEngine
 
 

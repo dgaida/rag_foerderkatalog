@@ -8,11 +8,12 @@ Nur Tests ohne:
 FOKUS: Kern-Funktionalität die GARANTIERT funktioniert
 """
 
-import pytest
-import tempfile
 import json
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 
 class TestAddVectorBasics:

@@ -7,23 +7,25 @@ Tests für:
 - Provider-spezifische Index-Dateien
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from src.config import (
-    ROOT,
-    INPUT_CSV,
     DATA_DIR,
-    EMBEDDINGS_FILE,
-    FAISS_INDEX_FILE_OLLAMA,
-    FAISS_INDEX_FILE_HF,
-    EMBED_MAP_FILE_OLLAMA,
     EMBED_MAP_FILE_HF,
-    LOG_DIR,
-    OLLAMA_EMBED_MODEL,
+    EMBED_MAP_FILE_OLLAMA,
+    EMBEDDINGS_FILE,
+    FAISS_INDEX_FILE_HF,
+    FAISS_INDEX_FILE_OLLAMA,
     HF_EMBED_MODEL_DEFAULT,
+    INPUT_CSV,
     LLM_DEFAULT_MODEL,
-    TOP_K_DEFAULT,
+    LOG_DIR,
     MAX_DOCS_FOR_LLM,
+    OLLAMA_EMBED_MODEL,
+    ROOT,
+    TOP_K_DEFAULT,
     get_index_files,
 )
 
@@ -214,6 +216,7 @@ class TestConfigImmutability:
     def test_constants_are_final(self):
         """Test: Wichtige Konstanten sind als Final markiert (Typ-Check)."""
         from typing import get_type_hints
+
         import src.config as config_module
 
         get_type_hints(config_module, include_extras=True)

@@ -8,7 +8,8 @@ fehlende Projekte, die noch indiziert werden müssen.
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple, Optional
+from typing import List, Optional, Set, Tuple
+
 import pandas as pd
 
 from ..embeddings.faiss_store import FaissStore

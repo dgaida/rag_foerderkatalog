@@ -7,16 +7,13 @@ Tests für:
 - Statistik-Generierung
 """
 
-import pytest
-import pandas as pd
 from unittest.mock import MagicMock
-from src.utils.index_validator import (
-    IndexValidator,
-    check_index_completeness,
-    get_new_projects_summary,
-)
-from src.embeddings.faiss_store import FaissStore
 
+import pandas as pd
+import pytest
+
+from src.embeddings.faiss_store import FaissStore
+from src.utils.index_validator import IndexValidator, check_index_completeness, get_new_projects_summary
 
 # ===== Fixtures auf Modul-Ebene (verfügbar für alle Testklassen) =====
 
