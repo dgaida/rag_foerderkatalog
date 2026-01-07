@@ -115,8 +115,8 @@ class FKZIndexValidator:
         # Extrahiere und bereinige FKZ
         fkz_series = self.df[self.fkz_column].astype(str).str.strip()
 
-        # Filtere leere und 'nan' Werte
-        fkz_set = set(fkz for fkz in fkz_series if fkz and fkz != "nan")
+        # Filtere leere, 'nan' und '<NA>' Werte
+        fkz_set = set(fkz for fkz in fkz_series if fkz and fkz not in ("nan", "<NA>"))
 
         return fkz_set
 
@@ -326,7 +326,8 @@ def compare_csv_files(old_csv: Path, new_csv: Path, fkz_column: str = '="FKZ"') 
     def get_fkz_set(df):
         if fkz_column not in df.columns:
             raise ValueError(f"FKZ-Spalte '{fkz_column}' nicht gefunden")
-        return set(fkz.strip() for fkz in df[fkz_column].astype(str) if fkz and fkz != "nan")
+        fkz_series = df[fkz_column].astype(str).str.strip()
+        return set(fkz for fkz in fkz_series if fkz and fkz not in ("nan", "<NA>"))
 
     old_fkz = get_fkz_set(df_old)
     new_fkz = get_fkz_set(df_new)

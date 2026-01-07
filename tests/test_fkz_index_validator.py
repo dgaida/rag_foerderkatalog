@@ -178,6 +178,8 @@ class TestGetCSVFKZ:
         validator = FKZIndexValidator(mock_faiss_empty, df)
         result = validator.get_csv_fkz()
 
+        # pd.NA wird zu "<NA>" konvertiert, float("nan") zu "nan"
+        # Beide sollten gefiltert werden
         assert result == {"ABC001", "ABC003"}
 
 
@@ -222,25 +224,55 @@ class TestGetRemovedFKZ:
 
         assert result == set()
 
-    def test_get_removed_fkz_some_removed(self, sample_df):
+    def test_get_removed_fkz_some_removed(self, mock_faiss_empty):
         """Test: Entfernte FKZ werden identifiziert."""
-        # Index enthält FKZ die nicht mehr in CSV sind
-        mock_faiss = MagicMock(spec=FaissStore)
+        # Erstelle einen DataFrame mit 5 aktuellen FKZ
+        df_current = pd.DataFrame(
+            {
+                '="FKZ"': ["ABC001", "ABC002", "ABC003", "ABC004", "ABC005"],
+                '="Zuwendungsempfänger"': ["Uni A", "Uni B", "Uni C", "Uni D", "Uni E"],
+            }
+        )
 
-        # Erweitere DataFrame um Index 5 und 6 für die "alten" FKZ
-        extended_df = pd.concat(
-            [sample_df, pd.DataFrame({'="FKZ"': ["OLD001", "OLD002"], '="Zuwendungsempfänger"': ["Old A", "Old B"]})],
+        # Mock FAISS enthält 7 FKZ, davon 2 veraltete (OLD001, OLD002)
+        # Die sind an Indizes 5 und 6 (nicht im aktuellen DataFrame)
+        # Erweitere DataFrame temporär für die Mock-Simulation
+        df_extended = pd.concat(
+            [
+                df_current,
+                pd.DataFrame(
+                    {
+                        '="FKZ"': ["OLD001", "OLD002"],
+                        '="Zuwendungsempfänger"': ["Old A", "Old B"],
+                    }
+                ),
+            ],
             ignore_index=True,
         )
 
-        # id_map verweist auf Indizes 5 und 6 (OLD001, OLD002)
-        mock_faiss.id_map = {"0": "5", "1": "6"}
+        # FAISS id_map verweist auf alle 7 Indizes
+        mock_faiss = MagicMock(spec=FaissStore)
+        mock_faiss.id_map = {str(i): str(i) for i in range(7)}
 
-        validator = FKZIndexValidator(mock_faiss, extended_df)
+        # Erstelle Validator mit ERWEITERTEM DataFrame
+        validator = FKZIndexValidator(mock_faiss, df_extended)
 
-        # Jetzt simulieren wir, dass CSV nur sample_df ist (ohne OLD001, OLD002)
-        validator.df = sample_df
+        # get_indexed_fkz() sollte alle 7 FKZ zurückgeben
+        indexed = validator.get_indexed_fkz()
+        assert len(indexed) == 7
+        assert "OLD001" in indexed
+        assert "OLD002" in indexed
 
+        # JETZT setze den aktuellen DataFrame (ohne OLD001, OLD002)
+        validator.df = df_current
+
+        # get_csv_fkz() sollte nur die 5 aktuellen FKZ zurückgeben
+        csv_fkz = validator.get_csv_fkz()
+        assert len(csv_fkz) == 5
+        assert "OLD001" not in csv_fkz
+        assert "OLD002" not in csv_fkz
+
+        # Jetzt sollte get_removed_fkz() die 2 veralteten FKZ finden
         result = validator.get_removed_fkz()
 
         assert result == {"OLD001", "OLD002"}
