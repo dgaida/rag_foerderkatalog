@@ -88,9 +88,10 @@ class FKZIndexValidator:
                     fkz = self.df.iloc[df_idx][self.fkz_column]
 
                     # Bereinige FKZ (entferne mögliche Formatierung)
-                    fkz_clean = str(fkz).strip()
-                    if fkz_clean and fkz_clean != "nan":
-                        indexed_fkz.add(fkz_clean)
+                    if pd.notna(fkz):
+                        fkz_clean = str(fkz).strip()
+                        if fkz_clean and fkz_clean not in ("nan", "<NA>"):
+                            indexed_fkz.add(fkz_clean)
 
             except (ValueError, TypeError, KeyError, IndexError) as e:
                 logger.warning("Fehler beim Mapping von Index %s: %s", df_idx_str, e)
@@ -116,7 +117,7 @@ class FKZIndexValidator:
         fkz_series = self.df[self.fkz_column].astype(str).str.strip()
 
         # Filtere leere, 'nan' und '<NA>' Werte
-        fkz_set = set(fkz for fkz in fkz_series if fkz and fkz not in ("nan", "<NA>"))
+        fkz_set = set(fkz for fkz in fkz_series if pd.notna(fkz) and fkz not in ("", "nan", "<NA>"))
 
         return fkz_set
 
@@ -327,7 +328,7 @@ def compare_csv_files(old_csv: Path, new_csv: Path, fkz_column: str = '="FKZ"') 
         if fkz_column not in df.columns:
             raise ValueError(f"FKZ-Spalte '{fkz_column}' nicht gefunden")
         fkz_series = df[fkz_column].astype(str).str.strip()
-        return set(fkz for fkz in fkz_series if fkz and fkz not in ("nan", "<NA>"))
+        return set(fkz for fkz in fkz_series if pd.notna(fkz) and fkz not in ("", "nan", "<NA>"))
 
     old_fkz = get_fkz_set(df_old)
     new_fkz = get_fkz_set(df_new)

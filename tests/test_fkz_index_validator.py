@@ -263,6 +263,10 @@ class TestGetRemovedFKZ:
         assert "OLD001" in indexed
         assert "OLD002" in indexed
 
+        # Mock get_indexed_fkz, damit es weiterhin alle 7 FKZ zurückgibt,
+        # auch wenn der DataFrame verkleinert wird (simuliert Persistenz des Index)
+        validator.get_indexed_fkz = MagicMock(return_value=indexed)
+
         # JETZT setze den aktuellen DataFrame (ohne OLD001, OLD002)
         validator.df = df_current
 

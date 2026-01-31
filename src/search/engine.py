@@ -151,7 +151,7 @@ class ProjectSearchEngine:
 
         # Entferne Excel-Formatierung von allen String-Spalten
         for col in df.columns:
-            if df[col].dtype == object:
+            if df[col].dtype == object or pd.api.types.is_string_dtype(df[col]):
                 df[col] = df[col].astype(str).str.replace('="', "", regex=False).str.replace('"', "", regex=False)
 
         # Bereinige Fördersumme und konvertiere zu numerisch
