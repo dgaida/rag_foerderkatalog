@@ -9,9 +9,13 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 [![Test Suite](https://github.com/dgaida/rag_foerderkatalog/workflows/Test%20Suite/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/master/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![Black](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Ruff](https://img.shields.io/badge/lint-ruff-red)
+![mypy](https://img.shields.io/badge/type%20checked-mypy-blue)
+![Docs](https://img.shields.io/readthedocs/dgaida/rag_foerderkatalog)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/dgaida/rag_foerderkatalog/graphs/commit-activity)
+![Last commit](https://img.shields.io/github/last-commit/dgaida/rag_foerderkatalog)
 
 ## 🚀 Features
 
