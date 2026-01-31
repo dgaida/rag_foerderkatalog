@@ -10,6 +10,7 @@ Die finalen Treffer sind eine deduplizierte Kombination (semantische Treffer zue
 """
 from __future__ import annotations
 
+import os
 from typing import List, Optional
 
 import gradio as gr
@@ -1149,6 +1150,32 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             elem_classes="markdown-header",
         )
 
+        groq_key_preset = os.getenv("GROQ_API_KEY")
+
+        if not groq_key_preset:
+            with gr.Row():
+                gr.Markdown(
+                    """
+                    <div class="info-card">
+                        <div class="info-card-title">🔑 API-Konfiguration erforderlich</div>
+                        <div class="info-card-content">
+                            Für KI-Antworten benötigen Sie einen GROQ API-Key.
+                            <a href="https://console.groq.com/" target="_blank" style="color: #6366f1; font-weight: 600;">
+                            Hier kostenlos registrieren</a>.
+                        </div>
+                    </div>
+                    """
+                )
+
+            with gr.Row():
+                api_key_input = gr.Textbox(
+                    label="🔑 GROQ API Key",
+                    placeholder="gsk_...",
+                    type="password",
+                    elem_classes="input-container",
+                )
+                api_status = gr.Markdown("⚠️ Kein API-Key gesetzt", elem_classes="footer-text")
+
         # Info Card
         # Info Card - mit dynamischen Projektzahlen
         with gr.Row():
@@ -1255,8 +1282,13 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             )
 
         # Search Function
-        def on_search(query: str, mode_choice: str, k: int):
+        def on_search(query: str, mode_choice: str, k: int, api_key: str = ""):
             """Führt die Suche durch und generiert Ergebnisse."""
+
+            # Setze API-Key wenn vom User bereitgestellt
+            if api_key and api_key.strip():
+                os.environ["GROQ_API_KEY"] = api_key.strip()
+
             logger.info("Suchanfrage: mode=%s, k=%s, query=%s", mode_choice, k, query)
 
             if not query or not query.strip():
@@ -1347,9 +1379,13 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                 - **Query**: _{query}_
                 """
 
-                # LLM Antwort
+                # LLM Antwort - mit API-Key-Check
                 try:
-                    answer = engine.answer_with_context(query)
+                    if not os.getenv("GROQ_API_KEY"):
+                        answer = "⚠️ **API-Key fehlt**: Bitte geben Sie einen GROQ API-Key ein, um KI-Antworten zu erhalten."
+                        dropdown_update = gr.update(choices=[], visible=False)
+                    else:
+                        answer = engine.answer_with_context(query)
 
                     # Extrahiere FKZ aus Antwort
                     fkz_list = extract_fkz_from_text(answer)
@@ -1404,11 +1440,28 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             return gr.update(visible=True, value=details)
 
         # Event Handlers
-        search_btn.click(
-            on_search,
-            inputs=[query_input, mode, k_slider],
-            outputs=[result_table, llm_answer, stats_output, fkz_radio, detail_output],
-        )
+        if not groq_key_preset:
+            # Mit API-Key Input
+            search_btn.click(
+                on_search,
+                inputs=[query_input, mode, k_slider, api_key_input],
+                outputs=[result_table, llm_answer, stats_output, fkz_radio, detail_output],
+            )
+
+            # API-Key Status updaten
+            def update_api_status(key):
+                if key and key.strip():
+                    return "✅ API-Key gesetzt"
+                return "⚠️ Kein API-Key gesetzt"
+
+            api_key_input.change(update_api_status, inputs=[api_key_input], outputs=[api_status])
+        else:
+            # Ohne API-Key Input (für lokale Nutzung)
+            search_btn.click(
+                lambda q, m, k: on_search(q, m, k, ""),
+                inputs=[query_input, mode, k_slider],
+                outputs=[result_table, llm_answer, stats_output, fkz_radio, detail_output],
+            )
 
         # Dropdown-Auswahl zeigt Details
         fkz_radio.change(show_fkz_detail, inputs=[fkz_radio], outputs=[detail_output])

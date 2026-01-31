@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: rag-foerderkatalog
+    env: python
+    region: frankfurt  # oder oregon/singapore
+    plan: free  # Empfohlen: Free Tier hat nur 512MB RAM
+    branch: master
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: python main.py --no-embeddings --provider huggingface
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 7860
+      - key: GRADIO_SERVER_NAME
+        value: 0.0.0.0
+      - key: GRADIO_SERVER_PORT
+        value: 7860
+      # Optional: Setze einen Default-API-Key (nur für Demo-Zwecke)
+      # - key: GROQ_API_KEY
+      #   sync: false  # Nicht in render.yaml committen!
+
+    # Disk Storage für persistente Daten
+    disk:
+      name: data-storage
+      mountPath: /opt/render/project/src/data
+      sizeGB: 2  # 2GB sollten für Index ausreichen

@@ -10,16 +10,17 @@ main.py - AKTUALISIERT mit FKZ-basierter Validierung
 from __future__ import annotations
 
 import argparse
-import logging
 import json
+import logging
+import os
 
-from src.utils.logging_config import setup_logging, get_logger
-from src.search.engine import ProjectSearchEngine
+from src.config import EmbeddingProvider, get_index_files
 from src.llm.llm_wrapper import embed_text
-from src.config import get_index_files, EmbeddingProvider
+from src.search.engine import ProjectSearchEngine
 
 # GEÄNDERT: Nutze FKZ-Validator
 from src.utils.fkz_index_validator import FKZIndexValidator, get_projects_to_index
+from src.utils.logging_config import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
@@ -294,6 +295,10 @@ def main():
             logger.warning("")
 
     # Starte Gradio App
+    port = int(os.getenv("PORT", 7860))
+    server_name = os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")
+
+    # Starte Gradio App
     try:
         from src.app import build_ui
 
@@ -303,7 +308,9 @@ def main():
         logger.info("🌐 Starte Gradio-Oberfläche...")
         logger.info("📊 Provider: %s", args.provider.upper())
         logger.info("📁 Index: %s", engine.faiss.index_file.name)
-        demo.launch(share=False, inbrowser=True)
+        logger.info("🌐 Server: %s:%d", server_name, port)
+
+        demo.launch(server_name=server_name, server_port=port, share=False, inbrowser=False)  # Auf Render kein Browser-Opening
     except Exception as e:
         logger.exception("❌ Fehler beim Starten der Gradio-App: %s", e)
         raise
