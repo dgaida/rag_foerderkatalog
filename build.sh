@@ -8,17 +8,16 @@ echo "🔨 Starting Render Build..."
 # Upgrade pip
 pip install --upgrade pip
 
-# Install dependencies
-echo "📦 Installing dependencies..."
-pip install -e .
+# Install minimal dependencies for download script
+echo "📦 Installing download dependencies..."
+pip install requests tqdm
 
-# Download data if needed
-echo "📥 Checking for required data files..."
-if [ ! -f "input/foerderkatalog_export.csv" ] || [ ! -f "data/vector_hf.index" ]; then
-    echo "⚠️  Data files missing - attempting download..."
-    python download_data.py
-else
-    echo "✅ Data files present"
-fi
+# Download data FIRST
+echo "📥 Downloading required data files..."
+python download_data.py
+
+# Install full dependencies
+echo "📦 Installing full dependencies..."
+pip install -e .
 
 echo "✅ Build completed successfully!"
