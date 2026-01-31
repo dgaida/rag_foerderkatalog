@@ -1,17 +1,18 @@
 """Unit-Tests für src/utils/index_validator.py"""
 
-import pytest
 from unittest.mock import MagicMock
+
 import pandas as pd
-from src.utils.index_validator import IndexValidator, check_index_completeness, get_new_projects_summary
+import pytest
+
 from src.embeddings.faiss_store import FaissStore
+from src.utils.index_validator import IndexValidator, check_index_completeness, get_new_projects_summary
+
 
 @pytest.fixture
 def sample_df():
-    return pd.DataFrame(
-        {"Data": [1, 2, 3, 4, 5]},
-        index=[0, 1, 2, 3, 4]
-    )
+    return pd.DataFrame({"Data": [1, 2, 3, 4, 5]}, index=[0, 1, 2, 3, 4])
+
 
 @pytest.fixture
 def mock_faiss():
@@ -20,6 +21,7 @@ def mock_faiss():
     mock.index.ntotal = 3
     mock.id_map = {"0": "0", "1": "1", "2": "2"}
     return mock
+
 
 class TestIndexValidator:
     def test_get_indexed_ids(self, mock_faiss, sample_df):
@@ -73,10 +75,12 @@ class TestIndexValidator:
         assert len(missing_df) == 1
         assert missing_df.index[0] == 3
 
+
 def test_check_index_completeness(mock_faiss, sample_df):
     is_complete, missing_count = check_index_completeness(mock_faiss, sample_df)
     assert is_complete is False
     assert missing_count == 2
+
 
 def test_get_new_projects_summary(mock_faiss, sample_df):
     # Add required columns for summary
@@ -89,6 +93,7 @@ def test_get_new_projects_summary(mock_faiss, sample_df):
     assert "2 neue Projekte" in summary
     assert "F4" in summary
     assert "F5" in summary
+
 
 def test_get_new_projects_summary_empty(sample_df):
     mock = MagicMock(spec=FaissStore)

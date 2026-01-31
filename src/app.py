@@ -8,6 +8,7 @@ Die hybride Suche kombiniert:
 - Keyword-Suche (Pandas simple matching) — Top-5 Treffer
 Die finalen Treffer sind eine deduplizierte Kombination (semantische Treffer zuerst, dann keyword).
 """
+
 from __future__ import annotations
 
 import os
@@ -1154,8 +1155,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
 
         if not groq_key_preset:
             with gr.Row():
-                gr.Markdown(
-                    """
+                gr.Markdown("""
                     <div class="info-card">
                         <div class="info-card-title">🔑 API-Konfiguration erforderlich</div>
                         <div class="info-card-content">
@@ -1164,8 +1164,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                             Hier kostenlos registrieren</a>.
                         </div>
                     </div>
-                    """
-                )
+                    """)
 
             with gr.Row():
                 api_key_input = gr.Textbox(
@@ -1182,8 +1181,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
             total_projects = len(engine.df) if engine.df is not None else 0
             indexed_projects = engine.faiss.index.ntotal if engine.faiss.index is not None else 0
 
-            gr.Markdown(
-                f"""
+            gr.Markdown(f"""
                 <div class="info-card">
                     <div class="info-card-title">💡 Über diese Anwendung</div>
                     <div class="info-card-content">
@@ -1194,8 +1192,7 @@ def build_ui(engine: ProjectSearchEngine) -> gr.Blocks:
                         <strong>Hybrider Suche</strong> für optimale Ergebnisse.
                     </div>
                 </div>
-                """
-            )
+                """)
 
         # Search Controls
         with gr.Row():
