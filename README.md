@@ -9,6 +9,7 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 [![Test Suite](https://github.com/dgaida/rag_foerderkatalog/workflows/Test%20Suite/badge.svg)](https://github.com/dgaida/rag_foerderkatalog/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/dgaida/rag_foerderkatalog/branch/master/graph/badge.svg)](https://codecov.io/gh/dgaida/rag_foerderkatalog)
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/github/v/tag/dgaida/rag_foerderkatalog?label=version)](https://github.com/dgaida/rag_foerderkatalog/tags)
 ![Black](https://img.shields.io/badge/code%20style-black-000000.svg)
 ![Ruff](https://img.shields.io/badge/lint-ruff-red)
 ![mypy](https://img.shields.io/badge/type%20checked-mypy-blue)
