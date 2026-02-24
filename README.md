@@ -17,6 +17,8 @@ Das Projekt nutzt **Ollama** für Embeddings, **FAISS** für Vektorsuche, **Grad
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/dgaida/rag_foerderkatalog/graphs/commit-activity)
 ![Last commit](https://img.shields.io/github/last-commit/dgaida/rag_foerderkatalog)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://dgaida.github.io/rag_foerderkatalog/)
 
 ## 🚀 Features
 
